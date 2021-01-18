@@ -1,141 +1,293 @@
 from math import exp, log, log10
+import re
+import numpy as np
 import pandas as pd
 import collect_data
+import sys
 
 
-def get_K_solids(temperature):
-    molecules = pd.read_csv("Data/Solids/Solids_Cp.dat", header=None, skiprows=1)
-    molecule = molecules[0]
-    method = molecules[1]
-    deltaH = molecule[2]
-    S0 = molecules[3]
-    k0 = molecules[4]
-    k1 = molecules[5]
-    k2 = molecules[6]
-    k3 = molecules[7]
-    C0 = 0
-    C1 = 0
-    C2 = 0
-    C3 = 0
+def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
+    atoms_in_molecule = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
+    reference_correction = 0.
 
-    for index, m in enumerate(molecule):
-        if method[index] == 'B8' or method[index] == 'B5' or method[index] == 'JB':
-            C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
-            C1 = 2. * k1 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
-                        temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
-            C2 = -k2 * (((temperature ** -1.) - (298.15 ** -1.)) - (
-                        (temperature / 2.) * (((temperature ** -2.) - (298.15 ** -2.)))))
-            C3 = -k3 * ((((temperature ** -2.) - (298.15 ** -2.)) / 2.) - (
-                        (temperature / 3.) * (((temperature ** -3.) - (298.15 ** -3.)))))
+    for atom in atoms_in_molecule:
+        atom_df = pd.read_csv("Data/Reference/" + atom[0] + "_ref.dat", header=None, skiprows=2, delimiter="\t",
+                              index_col=False).astype(str).replace("INFINITE", np.inf)
+        atom_df = atom_df[~atom_df[0].str.contains('#')].astype(float)
+        temperature_ref = list(atom_df[0])
+        delta_H_ref = list(atom_df[4])
+        S_ref = list(atom_df[2])
+        H_ref = list(atom_df[5])
+        H0 = collect_data.lookup_and_interpolate(temperature_ref, H_ref, 298.15) * 1000.
+        change_H = collect_data.lookup_and_interpolate(temperature_ref, delta_H_ref, temperature) * 1000.
+        change_S = collect_data.lookup_and_interpolate(temperature_ref, S_ref, temperature)
+        fugacities = ['H', 'Cl', 'F', 'O', 'N']
+        if atom[0] in fugacities:
+            reference_correction += (float(atom[1]) / 2.) * (H0 + change_H - (temperature * change_S))
+        else:
+            reference_correction += (float(atom[1])) * (H0 + change_H - (temperature * change_S))
 
-        if method[index] == 'B3':
-            C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
-            C1 = -k1 * (((temperature ** -1.) - (298.15 ** -1.)) - (
-                        (temperature / 2.) * (((temperature ** -2.) - (298.15 ** -2.)))))
-            C2 = 2. * k2 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
-                        temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
-            C3 = k3 * ((log(temperature) - log(298.15)) + (temperature * ((temperature ** -1.) - (298.15 ** -1.))))
+    del_G_formation_solid = delta_H - (temperature * S0) + C0 + C1 + C2 + C3
+    del_G_formation_reaction = del_G_formation_solid - reference_correction
 
-        if method[index] == 'R':
-            C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
-            C1 = k1 * ((0.5 * ((temperature ** 2) - (298.15 ** 2))) - (temperature * (temperature - 298.15)))
-            C2 = 2. * k2 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
-                        temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
-            C3 = -k3 * (((temperature ** -1.) - (298.15 ** -1.)) - (
-                        (temperature / 2.) * (((temperature ** -2.) - (298.15 ** -2.)))))
+    K = exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
 
-        if method[index] == 'J':
-            molecule_df = pd.read_csv("Data/Janaf/" + molecule[index] + ".dat", header=None, skiprows=2)
-            temperature_ref = molecule_df[0]
-            delta_H_ref = molecule_df[4]
-            H_ref = molecule_df[5]
-            S_ref = molecule_df[2]
-            delta_G_ref = molecule_df[6]
-            K_ref = molecule_df[7]
+    return K
 
-            if temperature > temperature_ref[-1]:
-                del_H = float(molecule[2])
-                S0 = float(molecule[3])
-                k0 = float(molecule[4])
-                k1 = float(molecule[5])
-                k2 = float(molecule[6])
-                k3 = float(molecule[7])
-                C0 = k0 * ((T - 298.15) - (T * (log(T) - log(298.15))))
-                C1 = 2. * k1 * (((T ** 0.5) - (298.15 ** 0.5)) + (T * (((T ** -0.5)) - ((298.15 ** -0.5)))))
-                C2 = -k2 * (((T ** -1.) - (298.15 ** -1.)) - ((T / 2.) * (((T ** -2.) - (298.15 ** -2.)))))
-                C3 = -k3 * ((((T ** -2.) - (298.15 ** -2.)) / 2.) - ((T / 3.) * (((T ** -3.) - (298.15 ** -3.)))))
-            else:
-                K = lookup_and_interpolate(Temp_ref, K_ref, T)
-                return K
 
-        Mol_name_split = re.findall(r'([A-Z][a-z]*)(\d*)', Name)
-        reference_correction = 0.
+def solid_K_B8_B5_JB(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
+    C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
+    C1 = 2. * k1 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
+            temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
+    C2 = -k2 * (((temperature ** -1.) - (298.15 ** -1.)) - (
+            (temperature / 2.) * (((temperature ** -2.) - (298.15 ** -2.)))))
+    C3 = -k3 * ((((temperature ** -2.) - (298.15 ** -2.)) / 2.) - (
+            (temperature / 3.) * (((temperature ** -3.) - (298.15 ** -3.)))))
+    K = calc_solid_K(molecule=molecule, temperature=temperature, C0=C0, C1=C1, C2=C2, C3=C3, S0=S0, delta_H=delta_H)
+    return K
 
-        for i in Mol_name_split:
-            Temp_ref = []
-            del_H_ref = []
-            S_ref = []
-            G_ref = []
-            H_ref = []
 
-            path = open("Data/Reference/" + i[0] + "_ref.dat", "rU")
-            for aRow in path:
-                if not aRow.startswith("#"):
-                    values = aRow.split('\t')
-                    Temp_ref.append(float(values[0]))
-                    del_H_ref.append(float(values[4]))
-                    H_ref.append(float(values[5]))
-                    S_ref.append(float(values[2]))
+def solid_K_B3(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
+    C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
+    C1 = -k1 * (((temperature ** -1.) - (298.15 ** -1.)) - (
+            (temperature / 2.) * (((temperature ** -2.) - (298.15 ** -2.)))))
+    C2 = 2. * k2 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
+            temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
+    C3 = k3 * ((log(temperature) - log(298.15)) + (temperature * ((temperature ** -1.) - (298.15 ** -1.))))
+    K = calc_solid_K(molecule=molecule, temperature=temperature, C0=C0, C1=C1, C2=C2, C3=C3, S0=S0, delta_H=delta_H)
+    return K
 
-            H0 = lookup_and_interpolate(Temp_ref, H_ref, 298.15) * 1000.
-            change_H = lookup_and_interpolate(Temp_ref, del_H_ref, T) * 1000.
-            change_S = lookup_and_interpolate(Temp_ref, S_ref, T)
-            # print "change_S",i[0],i[1],change_S
-            if i[0] in fugacities:
-                reference_correction += (float(i[1]) / 2.) * (H0 + change_H - (T * (change_S)))
-            else:
-                reference_correction += (float(i[1])) * (H0 + change_H - (T * (change_S)))
 
-        del_G_formation_solid = del_H - (T * S0) + C0 + C1 + C2 + C3
+def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
+    molecule_df = pd.read_csv("Data/Janaf/" + molecule + ".dat", header=None, skiprows=2, delimiter="\t",
+                              index_col=False)
+    temperature_ref = molecule_df[0]
+    delta_H_ref = molecule_df[4]
+    H_ref = molecule_df[5]
+    S_ref = molecule_df[2]
+    delta_G_ref = molecule_df[6]
+    K_ref = molecule_df[7]
 
-        # print "ref",reference_correction/1e3
-        # print "solid",del_G_formation_solid/1e3
-        # print del_G_formation_solid/1e3
-        # print reference_correction/1e3
-
-        del_G_formation_reaction = del_G_formation_solid - reference_correction
-
-        K = log10(exp(1)) * ((-del_G_formation_reaction / (8.3144621 * T)))
-
+    if temperature > float(temperature_ref.iloc[-1]):
+        C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
+        C1 = 2. * k1 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
+                temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
+        C2 = -k2 * (((temperature ** -1.) - (298.15 ** -1.)) - (
+                (temperature / 2.) * (((temperature ** -2.) - (298.15 ** -2.)))))
+        C3 = -k3 * ((((temperature ** -2.) - (298.15 ** -2.)) / 2.) - (
+                (temperature / 3.) * (((temperature ** -3.) - (298.15 ** -3.)))))
+        K = calc_solid_K(molecule=molecule, temperature=temperature, C0=C0, C1=C1, C2=C2, C3=C3, S0=S0, delta_H=delta_H)
+        return K
+    else:
+        K = collect_data.lookup_and_interpolate(temperature_ref, K_ref, temperature)
         return K
 
 
-def calculate_K_gas(molecules, temperature):
+def solid_K_R(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
+    C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
+    C1 = k1 * ((0.5 * ((temperature ** 2) - (298.15 ** 2))) - (temperature * (temperature - 298.15)))
+    C2 = 2. * k2 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
+            temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
+    C3 = -k3 * (((temperature ** -1.) - (298.15 ** -1.)) - (
+            (temperature / 2.) * (((temperature ** -2.) - (298.15 ** -2.)))))
+    K = calc_solid_K(molecule=molecule, temperature=temperature, C0=C0, C1=C1, C2=C2, C3=C3, S0=S0, delta_H=delta_H)
+    return K
+
+
+def get_K_solids(temperature):
+    K_dict = {}
+    molecules = pd.read_csv("Data/Solids/Solids_Cp.dat", delimiter="\t", header=None, skiprows=1, index_col=False)
+
+    for m in molecules.index:
+        molecule = molecules[0][m]
+        method = molecules[1][m]
+        delta_H = molecules[2][m]
+        S0 = molecules[3][m]
+        k0 = molecules[4][m]
+        k1 = molecules[5][m]
+        k2 = molecules[6][m]
+        k3 = molecules[7][m]
+        K = 0
+
+        if method == 'B8' or method == 'B5' or method == 'JB':
+            K = solid_K_B8_B5_JB(molecule=molecule, temperature=temperature, k0=k0, k1=k1, k2=k2, k3=k3, S0=S0,
+                                 delta_H=delta_H)
+
+        elif method == 'B3':
+            K = solid_K_B3(molecule=molecule, temperature=temperature, k0=k0, k1=k1, k2=k2, k3=k3, S0=S0,
+                           delta_H=delta_H)
+
+        elif method == 'R':
+            K = solid_K_R(molecule=molecule, temperature=temperature, k0=k0, k1=k1, k2=k2, k3=k3, S0=S0,
+                          delta_H=delta_H)
+
+        elif method == 'J':
+            K = solid_K_J(molecule=molecule, temperature=temperature, k0=k0, k1=k1, k2=k2, k3=k3, S0=S0,
+                          delta_H=delta_H)
+
+        else:
+            K = 0
+
+        K_dict.update({molecule: K})
+
+    return K_dict
+
+
+def gas_J(temperature, molecule, R=8.3144621):
+    """
+    Calculates K for gasses with the JANAF regime.
+    :param temperature:
+    :param molecule:
+    :param R:
+    :return:
+    """
+    path_molecule = pd.read_csv("Data/Gasses/" + molecule + ".dat", delimiter="\t", skiprows=2, header=None,
+                                index_col=False)
+    reference_temperature = path_molecule[0]
+    delta_H = path_molecule[4]
+    H_ref = path_molecule[5]
+    S_ref = path_molecule[2]
+    delta_G_ref = path_molecule[6]
+    delta_G_gas = collect_data.lookup_and_interpolate(reference_temperature, delta_G_ref,
+                                                      temperature) * 1000  # interpolate deltaG
+    if temperature < reference_temperature.iloc[-1]:
+        # delta G = -RT ln(k)
+        # ln(k) = -deltaG / RT
+        # K = exp(-deltaG / RT)
+        # Note: 10**((-deltaG / RT) * log10(exp(1))) = exp(-deltaG / RT)
+        # Therefore, ln(K) = (-deltaG / RT) * log10(exp(1))
+
+        K = exp(-delta_G_gas / (R * temperature))
+        return K
+    else:
+        return 0
+
+
+def gas_K(temperature, molecule, R=8.3144621):
+    path = pd.read_csv("Data/Gasses.dat", delimiter="\t", header=None, index_col=0)
+    data = path.loc[molecule]
+    H0 = float(data[2])
+    S0 = float(data[3])
+    A = float(data[4])
+    B = float(data[5]) * 1e-3
+    C = float(data[6]) * 1e6
+
+    delH = H0 + A * (temperature - 298.15) + ((B / 2.) * ((temperature ** 2) - (298.15) ** 2)) - C * (
+            (1. / temperature) - (1. / 298.15))
+    S = S0 + A * (log(temperature) - log(298.15)) + B * (temperature - 298.15) - (C / 2.) * (
+        ((temperature ** -2) - (298.15) ** -2))
+
+    delG = delH - temperature * S  # deltaG = deltaH - TdeltaS
+    molecule_atom_stoich = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
+    reference_correction = 0.
+
+    for i in molecule_atom_stoich:
+        Temp_ref = []
+        del_H_ref = []
+        S_ref = []
+        G_ref = []
+        H_ref = []
+
+        path = open("Data/Reference/" + i[0] + "_ref.dat", "rU")
+        for aRow in path:
+            if not aRow.startswith("#"):
+                values = aRow.split('\t')
+                Temp_ref.append(float(values[0]))
+                del_H_ref.append(float(values[4]))
+                H_ref.append(float(values[5]))
+                S_ref.append(float(values[2]))
+
+        H0 = collect_data.lookup_and_interpolate(Temp_ref, H_ref, 298.15) * 1000.
+        change_H = collect_data.lookup_and_interpolate(Temp_ref, del_H_ref, temperature) * 1000.
+        change_S = collect_data.lookup_and_interpolate(Temp_ref, S_ref, temperature)
+        fugacities = ['H', 'Cl', 'F', 'O', 'N']
+        if i[0] in fugacities:
+            reference_correction += (float(i[1]) / 2.) * (H0 + change_H - (temperature * change_S))
+        else:
+            reference_correction += (float(i[1])) * (H0 + change_H - (temperature * change_S))
+    del_G_corrected = delG - reference_correction
+    K = exp(-del_G_corrected / (R * temperature))
+    return K
+
+
+def gas_P(temperature, molecule, R=8.3144621):
+    path_molecule = open("Data/Gasses/" + molecule + ".dat", "r")
+    Temp_ref = []
+    del_G_ref = []
+    del_H_ref = []
+    S_ref = []
+    H_ref = []
+    for aRow in path_molecule:
+        values = aRow.split('\t')
+        if not aRow.startswith('#'):
+            Temp_ref.append(float(values[0]))
+            del_G_ref.append(float(values[1]))
+    G0 = collect_data.lookup_and_interpolate(Temp_ref, del_G_ref, temperature)
+
+    del_G_gas = collect_data.lookup_and_interpolate(Temp_ref, del_G_ref, temperature)
+
+    molecule_atom_stoich = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
+    reference_correction = 0.
+
+    for i in molecule_atom_stoich:
+        Temp_ref = []
+        del_H_ref = []
+        S_ref = []
+        G_ref = []
+        H_ref = []
+
+        path = open("Data/Reference/" + i[0] + "_ref.dat", "r")
+        for aRow in path:
+            if not aRow.startswith("#"):
+                values = aRow.split('\t')
+                Temp_ref.append(float(values[0]))
+                del_H_ref.append(float(values[4]))
+                H_ref.append(float(values[5]))
+                S_ref.append(float(values[2]))
+
+        H0 = collect_data.lookup_and_interpolate(Temp_ref, H_ref, 298.15) * 1000.
+        change_H = collect_data.lookup_and_interpolate(Temp_ref, del_H_ref, temperature) * 1000.
+        change_S = collect_data.lookup_and_interpolate(Temp_ref, S_ref, temperature)
+        fugacities = ['H', 'Cl', 'F', 'O', 'N']
+        if i[0] in fugacities:
+            reference_correction += (float(i[1]) / 2.) * (H0 + change_H - (temperature * (change_S)))
+        else:
+            reference_correction += (float(i[1])) * (H0 + change_H - (temperature * (change_S)))
+    del_G_corrected = del_G_gas - reference_correction
+    K = exp(-del_G_corrected / (R * temperature))
+
+    return K
+
+
+def get_K_gas(molecules, methods, temperature):
+    """
+    Returns a dictionary of reference K values relative to the given temperature.
+    :param molecules:
+    :param temperature:
+    :return:
+    """
+    R = 8.3144621
     K_gas = {}
     for m in molecules:
-        path_molecule = pd.read_csv("Data/Gasses/" + m + ".dat", delimiter="\t", skiprows=1, header=None)
-        reference_temperature = path_molecule[0]
-        delta_H = path_molecule[1]
-        H_ref = path_molecule[4]
-        S_ref = path_molecule[2]
-        delta_G_ref = path_molecule[6]
-        delta_G_gas = collect_data.lookup_and_interpolate(reference_temperature, delta_G_ref,
-                                                          temperature) * 1000  # interpolate deltaG
-        K = 0
-        if temperature < reference_temperature[-1]:
-            # delta G = -RT ln(k)
-            # ln(k) = -deltaG / RT
-            # K = exp(-deltaG / RT)
-            K = exp(-delta_G_gas / (8.3144621 * temperature))
-            return K
-        K_gas.update({m: K})
-    return K_gas
+        method = methods[m]  # define method for determining K value (i.e. J = JANAF)
+        if method == "J":  # JANAF
+            K = gas_J(temperature=temperature, molecule=m)
+            K_gas.update({m: K})
+
+        elif method == "K":
+            K = gas_K(temperature=temperature, molecule=m)
+            K_gas.update({m: K})
+
+        elif method == "P":
+            K = gas_P(temperature=temperature, molecule=m)
+            K_gas.update({m: K})
+
+    return K_gas  # returns a dict of all K values for gasses
 
 
-def get_K(gas_molecules, solid_molecules, temperature):
-    K_dict = {}
-    K_gas = calculate_K_gas(molecules=gas_molecules.keys(), temperature=temperature)
-    K_solids = get_K_data(i, T)
+def get_K(gas_molecules, gas_methods, solid_molecules, temperature):
+    K_gas = get_K_gas(molecules=gas_molecules.keys(), methods=gas_methods, temperature=temperature)
+    K_solids = get_K_solids(temperature=temperature)
     K_dict = K_gas.copy()
     K_dict.update(K_solids)
     return K_dict

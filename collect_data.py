@@ -2,6 +2,12 @@ import pandas as pd
 import re
 import bisect
 
+def get_methods(path):
+    methods = {}
+    df = pd.read_csv(path, delimiter="\t", header=None)
+    for row in df.index:
+        methods.update({df[0][row]: df[1][row]})
+    return methods
 
 def linear_interpol(x, x1, x2, y1, y2):
     """
