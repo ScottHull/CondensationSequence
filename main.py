@@ -3,6 +3,7 @@ import k
 import mass_balance
 import numpy as np
 from scipy.optimize import root
+import sys
 
 
 class Condensation:
@@ -17,12 +18,15 @@ class Condensation:
         self.gas_methods = collect_data.get_methods(
             path="data/Gasses.dat")  # methods for calculating K for gasses (i.e. JANAF)
         self.gas_molecules_library = collect_data.get_atoms_from_molecule(path="data/Gasses.dat")
-        self.solids_molecules_library = collect_data.get_atoms_from_molecule(path="data/Solids_Cp.dat", skiprows=1)
+        self.solid_molecules_library = collect_data.get_atoms_from_molecule(path="data/Solids_Cp.dat", skiprows=1, solid=True)
         self.abundances = abundances
         self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
+        self.element_gas_appearances = collect_data.element_appearances_in_molecules(abundances=self.abundances, library=self.gas_molecules_library)
+        self.element_solid_appearances = collect_data.element_appearances_in_molecules(abundances=self.abundances, library=self.solid_molecules_library)
         self.partial_pressures = self.partial_pressure()
         self.condensing_solids = []
         self.K = {}
+        self.gas_activity_dict = {}
 
     def normalize_abundances(self, abundances):
         # norm = {}
@@ -77,16 +81,22 @@ class Condensation:
         # calculate the partial pressure of each element in the system
         # self.partial_pressures = self.partial_pressure()
         # return a dictionary of K values
-        self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solids_molecules_library,
+        self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
                          temperature=self.temperature, gas_methods=self.gas_methods)
+        self.partial_pressures = self.partial_pressure()
         # list of elements given in the input
         elements = self.normalized_abundances.keys()
         # a list of abundances corresponding to the elements list
-        abundances = np.array([self.partial_pressures[element] for element in elements])
-        args = (self.normalized_abundances, self.K, self.partial_pressures, self.gas_molecules_library,
-                self.normalized_abundances.keys(), self.temperature, self.condensing_solids)
-        gas_activity = root(mass_balance.mass_balance, abundances, args=args, method='lm',
-                            options={'maxiter': 100000000, 'ftol': 1.e-15})
+        guess_partial_pressures = np.array([self.partial_pressures[element] for element in elements])
+        args = (elements, self.element_gas_appearances, self.gas_molecules_library, self.K, self.partial_pressures,
+                self.temperature, self.condensing_solids)
+        # find root of mass balance as a function of partial pressure
+        gas_activity = root(mass_balance.mass_balance, guess_partial_pressures, args=args, method='lm',
+                            options={'maxiter': 100000000, 'ftol': 1.e-15})  # calculate the activities of gas phases corresponding to the element dict
+        gas_activity = dict(zip(elements, gas_activity.x))  # make a dictionary where the element is the key and the activity is the value
+        print(gas_activity)
+        sys.exit()
+
 
 
 a = {'Ni': 1.66e+16, 'C': 2.692e+18, 'F': 363100000000000.0, 'H': 1e+22, 'K': 1072000000000000.0,

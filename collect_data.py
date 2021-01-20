@@ -3,6 +3,11 @@ import re
 import bisect
 
 def get_methods(path):
+    """
+    Returns a dictionary of the method for calculating K for each molecule.
+    :param path:
+    :return:
+    """
     methods = {}
     df = pd.read_csv(path, delimiter="\t", header=None)
     for row in df.index:
@@ -32,7 +37,13 @@ def lookup_and_interpolate(table_x, table_y, x_value):
         return table_y[idx]
 
 
-def get_atoms_from_molecule(path, skiprows=0):
+def get_atoms_from_molecule(path, skiprows=0, solid=False):
+    """
+    Returns the stoichiometry of molecules as a dictionary.
+    :param path:
+    :param skiprows:
+    :return:
+    """
     molecules_dict = {}
     df = pd.read_csv(path, delimiter="\t", header=None, skiprows=skiprows)
     molecules = df[0]
@@ -40,5 +51,28 @@ def get_atoms_from_molecule(path, skiprows=0):
         molecules_dict.update({m: {}})
         atom_nums = re.findall(r'([A-Z][a-z]*)(\d*)', m)
         for i in atom_nums:
-            molecules_dict[m].update({i[0]: i[1]})
+            name = i[0]
+            if solid:  # denotes solid molecule
+                name = name + "_s"
+            molecules_dict[m].update({name: int(i[1])})
     return molecules_dict
+
+def element_appearances_in_molecules(abundances, library):
+    """
+    Given the abundances dictionary, return a dictionary where the element is the key and the molecules it appears in
+    as a list is the value.
+    :param abundances:
+    :param library:
+    :return:
+    """
+    element_appearances = {}
+    abundance_elements = abundances.keys()  # get a list of input elements
+    for atom in abundance_elements:  # construct the empty return dictionary
+        element_appearances.update({atom: []})
+    for molecule in library.keys():
+        atom_nums = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)  # returns something like [('Cl', '2'), ('Cr', '1')]
+        for atom_stoich in atom_nums:  # get the atom:stoich tuple
+            atom = atom_stoich[0]  # the atom name
+            if atom in element_appearances:
+                element_appearances[atom].append(molecule)
+    return element_appearances

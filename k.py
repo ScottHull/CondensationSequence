@@ -128,7 +128,7 @@ def get_K_solids(temperature):
         else:
             K = 0
 
-        K_dict.update({molecule: K})
+        K_dict.update({molecule + "_s": K})
 
     return K_dict
 
