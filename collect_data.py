@@ -2,6 +2,7 @@ import pandas as pd
 import re
 import bisect
 
+
 def get_methods(path):
     """
     Returns a dictionary of the method for calculating K for each molecule.
@@ -14,6 +15,7 @@ def get_methods(path):
         methods.update({df[0][row]: df[1][row]})
     return methods
 
+
 def linear_interpol(x, x1, x2, y1, y2):
     """
     Linearly interpolate to point x, between
@@ -25,6 +27,26 @@ def linear_interpol(x, x1, x2, y1, y2):
 
     alpha = (x - x1) / (x2 - x1)
     return (1.0 - alpha) * y1 + alpha * y2
+
+
+def linear_interpol_out(x, *args):
+    x1 = args[0]
+    x2 = args[1]
+    y1 = args[2]
+    y2 = args[3]
+    """
+    Linearly interpolate to point x, between
+    the points (x1,y1), (x2,y2)
+    """
+    # print "x1",x1
+    # print "x2",x2
+    # print "x",x
+    assert (x1 <= x)
+    assert (x2 >= x)
+    assert (x1 <= x2)
+
+    alpha = (x - x1) / (x2 - x1)
+    return -10. - ((1. - alpha) * y1 + alpha * y2)
 
 
 def lookup_and_interpolate(table_x, table_y, x_value):
@@ -57,6 +79,7 @@ def get_atoms_from_molecule(path, skiprows=0, solid=False):
             molecules_dict[m].update({name: int(i[1])})
     return molecules_dict
 
+
 def element_appearances_in_molecules(abundances, library):
     """
     Given the abundances dictionary, return a dictionary where the element is the key and the molecules it appears in
@@ -76,3 +99,20 @@ def element_appearances_in_molecules(abundances, library):
             if atom in element_appearances:
                 element_appearances[atom].append(molecule)
     return element_appearances
+
+
+def linear_interpol_in(x, *args):
+    x1 = args[0]
+    x2 = args[1]
+    y1 = args[2]
+    y2 = args[3]
+    """
+    Linearly interpolate to point x, between
+    the points (x1,y1), (x2,y2)
+    """
+    assert (x1 <= x)
+    assert (x2 >= x)
+    assert (x1 <= x2)
+
+    alpha = (x - x1) / (x2 - x1)
+    return (1.0 - alpha) * y1 + alpha * y2

@@ -1,10 +1,11 @@
 import numpy as np
 from math import log10
+from copy import copy
 import sys
 
 
-def calculate_molecule_number_density(element_appearances_in_molecules, molecule_library, K_dict, partial_pressures,
-                                      temperature, R=8.314):
+def number_density_element(element_appearances_in_molecules, molecule_library, K_dict, guess_number_densities,
+                                      temperature, R=8.3144621e-2):
     """
     Calculate the mass balance equation for product molecules as a function of partial pressure of the reactants.
     The ideal gas law is PV = nRT -> n/V = P/RT -> n/V is number density n_i -> n_i = P_i / RT
@@ -20,7 +21,12 @@ def calculate_molecule_number_density(element_appearances_in_molecules, molecule
     K_H2O = P_H2O / (P_H2 * (P_O2)^0.5) = (P_H2O / RT) / [(P_H2 / RT) * (P_O2 / RT)^0.5]
     Therefore, you can rearrange this equation to solve for the number density n_H2O:
     n_H2O = n_H2 * (n_O2)^0.5 * K_H2O * (RT)^0.5
-    Below I will write all number densities n_i in terms of the partial pressure: n_i = P_i / RT
+    Below I will write all number densities n_i in terms of the partial pressure: n_i = P_i / RT.
+    This function returns elemental mass balance equations, which is the sum of number densities of molecules that contain the element.
+    For example, the mass balance of O is:
+    N_0 = n_H2O _ n_CO + 2n_CO2
+    where the coefficent of 2 is because O appears twice.  Therefore, the general equation is number densities time the stoichiometry subscript of the element in the molecule.
+    Note that diatomic molecules (i.e. O2, H2, Cl2, etc) are written monatomically (i.e. with coefficients stoich / 2).
     :param molecules:
     :param molecule_library:
     :param K_dict:
@@ -28,26 +34,24 @@ def calculate_molecule_number_density(element_appearances_in_molecules, molecule
     :param temperature:
     :return:
     """
-    mass_balance = {}
-    diatomic_molecules = ['H', 'Cl', 'F', 'O', 'N']  # will have coefficients of 2 in balanced reactions
+    element_number_densities = {}
+    diatomic_molecules = ['H', 'Cl', 'F', 'O', 'N']  # diatomic molecules
     for atom in element_appearances_in_molecules.keys():  # atom is the element (i.e. Mg, Si, Fe, etc)
-        molecule_number_densities = []
-        for molecule in element_appearances_in_molecules[atom]:  # get the list of molecules in which the element appears and loop through it
-            if atom in diatomic_molecules:
-                pass
-            else:
-                molecule_stoich = molecule_library[molecule]  # get the stoichiometry of the molecule
-                K = K_dict[molecule]  # get the molecule's equilibrium constant K
-                reactant_partial_pressures_sum = np.prod([partial_pressures[i] ** (1.0 / molecule_stoich[i]) for i in
-                                                          molecule_stoich.keys()])  # this is the denominator of the K equation
-                partial_pressure_molecule = K * reactant_partial_pressures_sum  # prod(P_products) = K * prod(P_reactants)
-                number_density_molecule = partial_pressure_molecule / (R * temperature)  # n_i = P_i / RT
-                molecule_number_densities.append(molecule_stoich[atom] * number_density_molecule)  # multiply number density by stoich coefficient
-        mass_balance_atom = sum(molecule_number_densities)  # the total mass balance of the element is the sum of number densities with stoich coefficients
-        mass_balance.update({atom: mass_balance_atom})
-        if atom == "Cr":
-            print(mass_balance_atom)
-    return mass_balance
+        atom_number_density = 0  # e.g. N_O = n_H2O + n_CO + n_CO2 + ...
+        molecules = element_appearances_in_molecules[atom]    # get the list of molecules in which the element appears
+        for molecule in molecules:  # e.g. H2O
+            K = K_dict[molecule]  # K value of the molecule
+            molecule_partial_pressure = K / (R * temperature)  # P_H2O = (K_H2O * prod(P_reactant_elements)) / RT
+            molecule_stoich = molecule_library[molecule]  # get the stoichiometry of the molecule
+            for component_atom in molecule_stoich:  # e.g. {H: 2, O: 1}
+                component_stoich = molecule_stoich[component_atom]  # e.g. 2 for H
+                power = copy(component_stoich)
+                if component_atom in diatomic_molecules:
+                    power /= 2.0  # e.g. for H: 2/2 = 1
+                molecule_partial_pressure *= component_stoich * (guess_number_densities[component_atom] * R * temperature)**power
+            atom_number_density += molecule_partial_pressure
+        element_number_densities.update({atom: atom_number_density})
+    return element_number_densities
 
 
 def mass_balance_original(element_appearances_in_molecules, molecule_library, K_dict, partial_pressures,
@@ -72,15 +76,21 @@ def mass_balance_original(element_appearances_in_molecules, molecule_library, K_
                     if x == i:  # if the stoich element equals the input element
                         if x in fugacities:
                             # sum [  (nu_i / 2) * log(P_i * R * T + log(nu_i) ] -> raise to power of 10 -> sum [  nu_i (P_i * R * T)^(n_i / 2)  ]
+                            # entry += y * (partial_pressures[x] * RT)**(y / 2.0)
                             entry = entry + ((y / 2.) * log10(partial_pressures.get(x) * RT) + log10(y))
                         else:  # sum  [ nu_i * log(P_I * R * T) + log(y) ] -> raise to power of 10 -> sum [  nu_i (P_i * R * T)^(n_i)  ]
-                            entry = entry + (y * log10(partial_pressures.get(x) * RT) + log10(y))
+                            # entry += y * (partial_pressures[x] * RT)**y
+                            entry += (y * log10(partial_pressures.get(x) * RT) + log10(y))
                     else:  # if the stoich element does NOT equal the input element
                         if x in fugacities:  # sum [  (n_i / 2) * log(P_i * R * T)  ]  -> raise to power of 10 ->  sum [  (P_i * R * T)^(n_i / 2)  ]
+                            # entry += (partial_pressures[x] * RT)**(y / 2.0)
                             entry = entry + ((y / 2.) * log10(partial_pressures.get(x) * RT))
                         else:  # sum [  (n_i) * log(P_i * R * T)  ]  -> raise to power of 10 ->  sum [  (P_i * R * T)^(n_i)  ]
+                            # entry += (partial_pressures[x] * RT)**y
                             entry = entry + (y * log10(partial_pressures.get(x) * RT))
             # sum((P_i R T)^nu_i) + K/RT
+            # entry += K_dict[k] / RT
+            # if entry = (y * log10(partial_pressures.get(x) * RT) + log10(y)), then below entry = K
             entry = entry + (log10(K_dict.get(k))) - log10(RT)
             entry = pow(10., entry)
             out += entry
