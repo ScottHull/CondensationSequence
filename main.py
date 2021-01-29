@@ -40,7 +40,10 @@ class Condensation:
         self.previous_number_densities = {}
         self.number_densities_solids = {}
         self.elements_in_solid = []
-        self.total_elements_condensed = {}
+        self.elements_condensed = {}
+
+        self.in_solids = True
+        self.out_solids = True
 
     def normalize_abundances(self, abundances):
         # norm = {}
@@ -75,7 +78,6 @@ class Condensation:
             p_i = self.normalized_abundances[element] * (self.total_pressure / ((self.R * 10 ** -2) * self.temperature))
             partial_pressures.update({element: p_i})
         return partial_pressures
-
 
     def sequence(self):
         """
@@ -128,10 +130,7 @@ class Condensation:
         errors = mass_balance.mass_balance(number_densities.x, *args)
         error_threshold = sqrt(sum([i ** 2 for i in errors]))
 
-        # check in stable solid molecules into the system
-        any_in = True
-        any_out = True
-        while any_in and any_out:  # enter a while loop
+        while self.in_solids and self.out_solids:  # enter a while loop
             # in_solid is the solid that condenses
             # in_temperature is the temperature at which the solid condenses
             in_solid, in_temp = solids.check_in(
@@ -161,57 +160,6 @@ class Condensation:
                                                    number_density_solids_old=self.previous_number_densities,
                                                    temperature=self.temperature,
                                                    temperature_old=self.temperature + self.dT)
-
-            if out_solid == False:
-                any_out = False
-                out_temp = 0
-
-            if in_temp > out_temp:  # if the appearance temperature is greater than the disappearance temperature
-                self.condensing_solids.append(in_solid)
-                any_out = False  # a solid has not dropped out
-                any_in = True  # there is a new solid in
-                # track element in solid phase if it not already is being done
-                for s in self.solid_molecules_library[in_solid]:
-                    if s not in self.elements_in_solid:
-                        self.elements_in_solid.append(s)
-            else:  # if the disappearance temperature is greater than the appearance temperature
-                any_out = True  # there are exiting solids
-                any_in = False  # there are no new solids
-                self.temperature = out_temp  # set the temperature to the solid-out temperature
-                self.condensing_solids.remove(out_solid)  # remove the outgoing solid from the condensing solids list
-                del self.number_densities_solids[out_solid]  # remove the outgoing solid from the solids number density dict
-
-                self.removed_solids.append(out_solid)  # track the exit of the solid
-                self.normalized_abundances = self.normalize_abundances(self.abundances)
-                self.partial_pressures = self.partial_pressure()
-
-            if any_out is True or any_in is True:  # must reset parameters if a condensation change is ocurring
-                counter_out = 0
-                self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
-                         temperature=self.temperature, gas_methods=self.gas_methods)
-                self.partial_pressures = self.partial_pressure()
-                args = (Element_dict, K_dict, Par_Pres_dict, gasses, Name, T, condensing_solids)
-
-                gas_activity = root(fun.Mass_balance_fun, guess, args=args, method='lm',options={'maxiter': 100000000,'ftol':1.e-15})
-                guess = gas_activity.x
-                guess_dict = dict(zip(Name, guess))
-
-                errors = []
-                error_dict = {}
-                lst_sqr = 0.
-                errors = fun.Mass_balance_fun(gas_activity.x, *args)
-                error_dict = dict(zip(Name, errors))
-
-                for i,j in dict.iteritems(error_dict):
-                    if i not in condensing_solids:
-                        lst_sqr += pow(j, 2.)
-
-                n_x = dict(zip(Name, gas_activity.x))
-                Sum_Par_pres = get_data.get_total_atoms(Element_dict, n_x, gasses, condensing_solids, K_dict, RT,
-                                                        Element_solid_dict, solids)
-
-                guess = gas_activity.x
-                guess_dict = dict(zip(Name, guess))
 
 
 
