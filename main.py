@@ -117,8 +117,6 @@ class Condensation:
                                          'ftol': 1.e-15})  # calculate the activities of gas phases corresponding to the element dict
         self.number_densities = dict(zip(elements,
                                          number_densities.x))  # make a dictionary where the element is the key and the activity is the value
-        print(self.number_densities)
-        sys.exit()
 
         # the sum of all number densities across gasses and solids
         total_N = total_atoms.calculate_total_N(
@@ -131,12 +129,9 @@ class Condensation:
             K_dict=self.K,  # all equilibrium constants
             temperature=self.temperature,
         )
-        print(total_N)
-        sys.exit()
 
-        # no ideal gas law for solids...this is for solids?
         for i in self.condensing_solids:
-            # the solid number density is equal to the fractional number density
+            # the solid number density is equal to the fractional number density of the molecule?
             self.number_densities_solids.update({i: self.number_densities[i] / total_N})
 
         errors = mass_balance.mass_balance(number_densities.x, *args)

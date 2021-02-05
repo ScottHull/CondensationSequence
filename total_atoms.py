@@ -28,8 +28,9 @@ def molecule_number_density(number_densities, molecule_stoich, K, temperature, R
 def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appearances_in_molecules,
                       element_number_densities,
                       condensing_solids, gas_molecule_library, solid_molecule_library, K_dict, temperature,
-                      R=8.314):
+                      R=8.314e-2):
     """
+    Returns the total number density of all elements in the system based on their active gas and solid molecules.
     :param gas_element_appearances_in_molecules: a dictionary where the element is the key and the list of gas molecules it appears in is the value
     :param solid_element_appearances_in_molecules: a dictionary where the element is the key and the list of solid molecules it appears in is the value
     :param partial_pressures: gas activities calculated from the root finding function in main
@@ -59,13 +60,7 @@ def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appear
                 R=R
             )  # calculate number density
             num = stoich * number_density
-            if atom == "Ni":
-                tmp_nx = [element_number_densities[x] for x in molecule_stoich.keys()]
-                print(atom, molecule, K, tmp_nx)
             number_density_gas[atom] += num  # sum the number density
-        if atom == "Ni":
-            print(number_density_gas[atom])
-            sys.exit()
 
     # solids
     if len(condensing_solids) > 0:
@@ -78,7 +73,7 @@ def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appear
                 molecule_stoich = solid_molecule_library[molecule]  # retrieve the molecule stoichiometry
                 for component_atom in molecule_stoich.keys():
                     stoich = molecule_stoich[component_atom]
-                    num = stoich * partial_pressures[component_atom]  # calcualte number density
+                    num = stoich * element_number_densities[component_atom]  # calcualte number density
                     number_density_solid[atom] += num  # sum the number density
 
     total_pressure = sum(number_density_gas.values()) + sum(number_density_solid.values())

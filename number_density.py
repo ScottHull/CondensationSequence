@@ -8,7 +8,7 @@ import warnings
 
 
 def number_density_element_gas(element_appearances_in_molecules, molecule_library, K_dict, guess_number_densities,
-                                      temperature, R=8.3144621e-2):
+                               temperature, R=8.3144621e-2):
     """
     Calculate the mass balance equation for product molecules as a function of partial pressure of the reactants.
     The ideal gas law is PV = nRT -> n/V = P/RT -> n/V is number density n_i -> n_i = P_i / RT
@@ -41,7 +41,7 @@ def number_density_element_gas(element_appearances_in_molecules, molecule_librar
     diatomic_molecules = ['H', 'Cl', 'F', 'O', 'N']  # diatomic molecules
     for element in element_appearances_in_molecules.keys():  # element is the element (i.e. Mg, Si, Fe, etc)
         atom_number_density = 0  # e.g. N_O = n_H2O + n_CO + n_CO2 + ...
-        molecules = element_appearances_in_molecules[element]    # get the list of molecules in which the element appears
+        molecules = element_appearances_in_molecules[element]  # get the list of molecules in which the element appears
         for molecule in molecules:  # e.g. H2O
             K = K_dict[molecule]  # K value of the molecule
             molecule_number_density = K / (R * temperature)  # P_H2O = (K_H2O * prod(P_reactant_elements)) / RT
@@ -54,9 +54,10 @@ def number_density_element_gas(element_appearances_in_molecules, molecule_librar
                         power /= 2.0  # e.g. for H: 2/2 = 1
                     if component_element != element:  # only multiply by stoich coefficient if this is the element in focus
                         component_stoich = 1
-                    molecule_number_density *= component_stoich * (guess_number_densities[component_element] * R * temperature)**power
+                    molecule_number_density *= component_stoich * (
+                                guess_number_densities[component_element] * R * temperature) ** power
                 else:  # force the solver to re-guess
-                    molecule_num = 1e999
+                    molecule_number_density = 1e999
                     break
             atom_number_density += molecule_number_density
         element_number_densities.update({element: atom_number_density})
@@ -108,12 +109,12 @@ def solid_partial_pressure(molecule, guess_number_densities, solid_molecules_lib
         coeff = stoich[element]
         if element in fugacities:
             coeff /= 2.0
-        molecule_partial_pressure += guess_number_densities[element]**coeff
+        molecule_partial_pressure += guess_number_densities[element] ** coeff
     return molecule_partial_pressure
 
 
 def mass_balance_original(element_appearances_in_molecules, molecule_library, K_dict, partial_pressures,
-                                      temperature, R=8.3144621e-2):
+                          temperature, R=8.3144621e-2):
     fugacities = ['H', 'Cl', 'F', 'O', 'N']
     RT = R * temperature
     out_dict = {}
