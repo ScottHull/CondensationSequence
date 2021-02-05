@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 import bisect
+import sys
 
 
 def get_methods(path):
@@ -70,13 +71,14 @@ def get_atoms_from_molecule(path, skiprows=0, solid=False):
     df = pd.read_csv(path, delimiter="\t", header=None, skiprows=skiprows)
     molecules = df[0]
     for m in molecules:
-        molecules_dict.update({m: {}})
+        molecule_name = m
+        if solid:
+            molecule_name = m + "_s"
+        molecules_dict.update({molecule_name: {}})
         atom_nums = re.findall(r'([A-Z][a-z]*)(\d*)', m)
         for i in atom_nums:
             name = i[0]
-            if solid:  # denotes solid molecule
-                name = name + "_s"
-            molecules_dict[m].update({name: int(i[1])})
+            molecules_dict[molecule_name].update({name: int(i[1])})
     return molecules_dict
 
 

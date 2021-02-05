@@ -1,6 +1,7 @@
 from math import log10
 from scipy.optimize import brentq
 import collect_data
+import sys
 
 
 def check_in(solids, number_densities, temperature, K_dict, condensing_solids, temperature_old, K_dict_old,

@@ -135,6 +135,7 @@ class Condensation:
             self.number_densities_solids.update({i: self.number_densities[i] / total_N})
 
         errors = mass_balance.mass_balance(number_densities.x, *args)
+        # make sure that the guess number densities return 0's, or very very close to 0's.
         error_threshold = sqrt(sum([i ** 2 for i in errors]))
 
         # check in stable solid molecules into the system
@@ -160,7 +161,7 @@ class Condensation:
                 in_solid = False
                 in_temp = 0
             else:  # if the error is larger than the threshold
-                any_in = False
+                any_in = False  # break out of check-in loop
                 in_temp = 0
 
             new_solid = [in_solid]
