@@ -1,10 +1,13 @@
 import numpy as np
 from math import log10
 from copy import copy
+from collections import Counter
 import sys
+import re
+import warnings
 
 
-def number_density_element(element_appearances_in_molecules, molecule_library, K_dict, guess_number_densities,
+def number_density_element_gas(element_appearances_in_molecules, molecule_library, K_dict, guess_number_densities,
                                       temperature, R=8.3144621e-2):
     """
     Calculate the mass balance equation for product molecules as a function of partial pressure of the reactants.
@@ -36,22 +39,76 @@ def number_density_element(element_appearances_in_molecules, molecule_library, K
     """
     element_number_densities = {}
     diatomic_molecules = ['H', 'Cl', 'F', 'O', 'N']  # diatomic molecules
-    for atom in element_appearances_in_molecules.keys():  # atom is the element (i.e. Mg, Si, Fe, etc)
+    for element in element_appearances_in_molecules.keys():  # element is the element (i.e. Mg, Si, Fe, etc)
         atom_number_density = 0  # e.g. N_O = n_H2O + n_CO + n_CO2 + ...
-        molecules = element_appearances_in_molecules[atom]    # get the list of molecules in which the element appears
+        molecules = element_appearances_in_molecules[element]    # get the list of molecules in which the element appears
         for molecule in molecules:  # e.g. H2O
             K = K_dict[molecule]  # K value of the molecule
-            molecule_partial_pressure = K / (R * temperature)  # P_H2O = (K_H2O * prod(P_reactant_elements)) / RT
+            molecule_number_density = K / (R * temperature)  # P_H2O = (K_H2O * prod(P_reactant_elements)) / RT
             molecule_stoich = molecule_library[molecule]  # get the stoichiometry of the molecule
             for component_atom in molecule_stoich:  # e.g. {H: 2, O: 1}
-                component_stoich = molecule_stoich[component_atom]  # e.g. 2 for H
-                power = copy(component_stoich)
-                if component_atom in diatomic_molecules:
-                    power /= 2.0  # e.g. for H: 2/2 = 1
-                molecule_partial_pressure *= component_stoich * (guess_number_densities[component_atom] * R * temperature)**power
-            atom_number_density += molecule_partial_pressure
-        element_number_densities.update({atom: atom_number_density})
+                if guess_number_densities[component_atom] > 0:  # negative guesses break the simulation
+                    component_stoich = molecule_stoich[component_atom]  # e.g. 2 for H
+                    power = copy(component_stoich)
+                    if component_atom in diatomic_molecules:
+                        power /= 2.0  # e.g. for H: 2/2 = 1
+                    molecule_number_density *= component_stoich * (guess_number_densities[component_atom] * R * temperature)**power
+                    # warnings.simplefilter('error')
+                else:  # force the solver to re-guess
+                    molecule_partial_pressure = 1e999
+                    break
+            atom_number_density += molecule_number_density
+        element_number_densities.update({element: atom_number_density})
     return element_number_densities
+
+
+def get_all_condensing_solid_elements_and_molecules(condensing_solids):
+    """
+    Returns a dictionary of all condensing elements and a list of condensing solids in which the element appears.
+    :param condensing_solids:
+    :return:
+    """
+    solid_elements_and_molecules = {}
+    for molecule in condensing_solids:
+        stoich = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
+        for element in stoich:
+            if element not in solid_elements_and_molecules.keys():
+                solid_elements_and_molecules.update({element: []})
+            solid_elements_and_molecules[element].append(molecule)
+    return solid_elements_and_molecules
+
+
+def number_density_element_solid(guess_number_densities, condensing_solids, solid_molecule_library):
+    fugacities = ['H', 'Cl', 'F', 'O', 'N']
+    solid_number_density = {}
+    solids = get_all_condensing_solid_elements_and_molecules(condensing_solids=condensing_solids)
+    for element in solids.keys():
+        mass_balance = 0
+        molecules = solids[element]
+        for solid_molecule in molecules:
+            stoich = solid_molecule_library[solid_molecule]
+            for solid_element in stoich:
+                if guess_number_densities[solid_element] > 0:  # negative guesses break the solver
+                    coeff = stoich[solid_element]
+                    if solid_element in fugacities:
+                        coeff /= 2.0
+                    mass_balance += coeff * guess_number_densities[solid_element]
+                else:  # force the solver out to re-sample
+                    mass_balance = 1e999
+        solid_number_density.update({element: mass_balance})
+    return solid_number_density
+
+
+def solid_partial_pressure(molecule, guess_number_densities, solid_molecules_library, temperature, R=8.3144621e-2):
+    fugacities = ['H', 'Cl', 'F', 'O', 'N']
+    molecule_partial_pressure = 0
+    stoich = solid_molecules_library[molecule]
+    for element in stoich.keys():
+        coeff = stoich[element]
+        if element in fugacities:
+            coeff /= 2.0
+        molecule_partial_pressure += guess_number_densities[element]**coeff
+    return molecule_partial_pressure
 
 
 def mass_balance_original(element_appearances_in_molecules, molecule_library, K_dict, partial_pressures,
