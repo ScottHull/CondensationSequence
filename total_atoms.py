@@ -1,5 +1,6 @@
 import sys
 
+
 def molecule_number_density(number_densities, molecule_stoich, K, temperature, R=8.314):
     """
     Calculates the number density of a given molecule.
@@ -25,9 +26,9 @@ def molecule_number_density(number_densities, molecule_stoich, K, temperature, R
 
 
 def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appearances_in_molecules,
-                          element_number_densities,
-                          condensing_solids, gas_molecule_library, solid_molecule_library, K_dict, temperature,
-                          R=8.314):
+                      element_number_densities,
+                      condensing_solids, gas_molecule_library, solid_molecule_library, K_dict, temperature,
+                      R=8.314):
     """
     :param gas_element_appearances_in_molecules: a dictionary where the element is the key and the list of gas molecules it appears in is the value
     :param solid_element_appearances_in_molecules: a dictionary where the element is the key and the list of solid molecules it appears in is the value
@@ -50,12 +51,17 @@ def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appear
             K = K_dict[molecule]  # get the equilibrium constant
             molecule_stoich = gas_molecule_library[molecule]  # retrieve the molecule stoichiometry
             stoich = gas_molecule_library[molecule][atom]
-            number_density = molecule_number_density(number_densities=element_number_densities, molecule_stoich=molecule_stoich, K=K,
-                                   temperature=temperature,
-                                   R=R)  # calcualte number density
+            number_density = molecule_number_density(
+                number_densities=element_number_densities,
+                molecule_stoich=molecule_stoich,
+                K=K,
+                temperature=temperature,
+                R=R
+            )  # calculate number density
             num = stoich * number_density
             if atom == "Ni":
-                print(atom, molecule, number_density)
+                tmp_nx = [element_number_densities[x] for x in molecule_stoich.keys()]
+                print(atom, molecule, K, tmp_nx)
             number_density_gas[atom] += num  # sum the number density
         if atom == "Ni":
             print(number_density_gas[atom])

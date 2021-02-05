@@ -46,16 +46,17 @@ def number_density_element_gas(element_appearances_in_molecules, molecule_librar
             K = K_dict[molecule]  # K value of the molecule
             molecule_number_density = K / (R * temperature)  # P_H2O = (K_H2O * prod(P_reactant_elements)) / RT
             molecule_stoich = molecule_library[molecule]  # get the stoichiometry of the molecule
-            for component_atom in molecule_stoich:  # e.g. {H: 2, O: 1}
-                if guess_number_densities[component_atom] > 0:  # negative guesses break the simulation
-                    component_stoich = molecule_stoich[component_atom]  # e.g. 2 for H
+            for component_element in molecule_stoich:  # e.g. {H: 2, O: 1}
+                if guess_number_densities[component_element] > 0:  # negative guesses break the simulation
+                    component_stoich = molecule_stoich[component_element]  # e.g. 2 for H
                     power = copy(component_stoich)
-                    if component_atom in diatomic_molecules:
+                    if component_element in diatomic_molecules:
                         power /= 2.0  # e.g. for H: 2/2 = 1
-                    molecule_number_density *= component_stoich * (guess_number_densities[component_atom] * R * temperature)**power
-                    # warnings.simplefilter('error')
+                    if component_element != element:  # only multiply by stoich coefficient if this is the element in focus
+                        component_stoich = 1
+                    molecule_number_density *= component_stoich * (guess_number_densities[component_element] * R * temperature)**power
                 else:  # force the solver to re-guess
-                    molecule_partial_pressure = 1e999
+                    molecule_num = 1e999
                     break
             atom_number_density += molecule_number_density
         element_number_densities.update({element: atom_number_density})

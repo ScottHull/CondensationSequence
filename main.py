@@ -117,6 +117,8 @@ class Condensation:
                                          'ftol': 1.e-15})  # calculate the activities of gas phases corresponding to the element dict
         self.number_densities = dict(zip(elements,
                                          number_densities.x))  # make a dictionary where the element is the key and the activity is the value
+        print(self.number_densities)
+        sys.exit()
 
         # the sum of all number densities across gasses and solids
         total_N = total_atoms.calculate_total_N(
