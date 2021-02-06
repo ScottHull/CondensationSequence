@@ -30,6 +30,11 @@ def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
     del_G_formation_solid = delta_H - (temperature * S0) + C0 + C1 + C2 + C3
     del_G_formation_reaction = del_G_formation_solid - reference_correction
 
+    # delta G = -RT ln(k)
+    # ln(k) = -deltaG / RT
+    # K = exp(-deltaG / RT)
+    # Note: 10**((-deltaG / RT) * log10(exp(1))) = exp(-deltaG / RT)
+    # Therefore, ln(K) = (-deltaG / RT) * log10(exp(1))
     K = exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
 
     return K
@@ -79,7 +84,8 @@ def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
         K = calc_solid_K(molecule=molecule, temperature=temperature, C0=C0, C1=C1, C2=C2, C3=C3, S0=S0, delta_H=delta_H)
         return K
     else:
-        K = collect_data.lookup_and_interpolate(temperature_ref, K_ref, temperature)
+        # data in table is given as log10(K)
+        K = 10**collect_data.lookup_and_interpolate(temperature_ref, K_ref, temperature)
         return K
 
 
@@ -126,7 +132,7 @@ def get_K_solids(temperature):
                           delta_H=delta_H)
 
         else:
-            K = 0
+            K = 1
 
         K_dict.update({molecule + "_s": K})
 
