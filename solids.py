@@ -25,32 +25,37 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
 
     new_solids = []
     for solid_molecule in solids.keys():
-        pressure_product = 1
+        pressure_product = 1  # the product of all reactant partial pressures
         pressure_product_old = 1
         solid_molecule_stoich = solids[solid_molecule]
         for element in solid_molecule_stoich.keys():
             stoich = solid_molecule_stoich[element]
             if element in fugacities:
                 pressure_product *= (number_densities[element] * R * temperature) ** (stoich / 2.0)
-                pressure_product_old *= (number_densities_old[element] * R * temperature_old) ** (stoich / 2.0)
+                if element in number_densities_old.keys():
+                    pressure_product_old *= (number_densities_old[element] * R * temperature_old) ** (stoich / 2.0)
             else:
                 pressure_product *= (number_densities[element] * R * temperature) ** (stoich)
-                pressure_product_old *= (number_densities_old[element] * R * temperature_old) ** (stoich)
+                if element in number_densities_old.keys():
+                    pressure_product_old *= (number_densities_old[element] * R * temperature_old) ** (stoich)
 
-        condensation_criterion = K_dict[solid_molecule] - pressure_product  # equation 12 of Unterborn & Panero 2017
-        condensation_criterion_old = K_dict_old[
-                                         solid_molecule] - pressure_product_old  # equation 12 of Unterborn & Panero 2017
-
-        # if the partial pressure exceeds the equilibrium constant
-        if solid_molecule not in condensing_solids:  # if the condensation criterion has previously been met
-            if condensation_criterion_old < 0:
-                new_solids.append([solid_molecule, temperature_old])
-            else:  # if the condensation criterion has just been met
-                # interpolate the exact condensation temperature
-                test_temperature = brentq(collect_data.linear_interpol_in, temperature, temperature_old, args=(
-                    temperature, temperature_old, condensation_criterion, condensation_criterion_old),
-                                          xtol=0.0000000001)
-                new_solids.append([solid_molecule, test_temperature])
+        # K * prod(P_i) = P_mol.  If P_mol >= 1, then the solid is stable (i.e. log10(1 / KP) < 0)
+        # - log10(K) - log10(prod(P_i)) = log(1 / K prod(P_i)) -> raise to power of 10 -> 1 / K prod(P_I)
+        condensation_criterion = 1.0 / (K_dict[solid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
+        print(solid_molecule, K_dict[solid_molecule])
+        if condensation_criterion < 1:
+            # if the partial pressure exceeds the equilibrium constant
+            if solid_molecule not in condensing_solids:  # if the condensation criterion has previously been met
+                condensation_criterion_old = 1.0 / (
+                            K_dict_old[solid_molecule] * pressure_product_old)  # i.e. "the chemical activity exceeds 1"
+                if condensation_criterion_old < 1:
+                    new_solids.append([solid_molecule, temperature_old])
+                else:  # if the condensation criterion has just been met
+                    # interpolate the exact condensation temperature
+                    test_temperature = brentq(collect_data.linear_interpol_in, temperature, temperature_old, args=(
+                        temperature, temperature_old, condensation_criterion, condensation_criterion_old),
+                                              xtol=0.0000000001)
+                    new_solids.append([solid_molecule, test_temperature])
 
     if len(new_solids) > 0:  # if there are any new solids
         solid_molecule = False

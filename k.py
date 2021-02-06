@@ -70,7 +70,7 @@ def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 
     if temperature > float(temperature_ref.iloc[-1]):
         C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
-        C1 = 2. * k1 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
+        C1 = 2 * k1 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
                 temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
         C2 = -k2 * (((temperature ** -1.) - (298.15 ** -1.)) - (
                 (temperature / 2.) * (((temperature ** -2.) - (298.15 ** -2.)))))
