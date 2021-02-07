@@ -34,13 +34,16 @@ class Condensation:
         self.condensing_solids = []
         self.removed_solids = []
         self.previous_removed_solids = []
-        self.K = {}
-        self.previous_K = {}
-        self.number_densities = {}
-        self.previous_number_densities = {}
-        self.number_densities_solids = {}
-        self.elements_in_solid = []
-        self.total_elements_condensed = {}
+        self.K = {}  # a dictionary of all K equilibrium constant values
+        self.previous_K = {}  # tracks K values from the previous temperature iteration
+        self.number_densities = {}  # element number densities
+        self.previous_number_densities = {}  # tracks number density solution from the previous temperature iteration
+        self.number_densities_solids = {}  # number densities of all solids
+        self.elements_in_solid = []  # all elements currently occupying a condensing solid
+        self.total_elements_condensed = {}  # tracks the number density of all elements in the condensed phase
+        self.percent_element_condensed = {}
+        for element in self.abundances.keys():  # initial setup of self.percent_element_condensed
+            self.percent_element_condensed.update({element: 0})
 
     def normalize_abundances(self, abundances):
         # norm = {}
@@ -142,6 +145,33 @@ class Condensation:
         any_in = True
         any_out = True
         while any_in and any_out:  # enter a while loop
+            """
+            Within this while loop, the following occurs
+            1. Check in solids
+            2. Check out solids
+            3. If check in temp > check out temp: (check in solid)
+                a. Get total N (final)
+                b. Append solid to condensing solids list
+                c. Set any_out to False and any_in to True (there are new solids)
+                d. Append solid elements to "elements_in_solids" list if it doesn't already exist
+                e. Adjust guesses based on solid in order to keep the solver moving
+                f. Append solid to Name and guess
+                g. Reset parameters so that the next loop has the updated information
+                h. Recalculate abundance and guess number density
+            4. If check out temp > check in temp: (check out solid)
+                a. Set any_out to True and any_in to False
+                b. Remove solid from condensing_solids list, num_solids dict, guess_dict, append to removed solids list
+                c. Recalculate abundance and guess number density
+                d. Reset parameters so that the next loop has the updated information
+            5. If any_in is True or any_out is True (solids have entered or left the system)
+                a. Recalculate K
+                b. Recalculate n_i with root solver
+            6. Recalculate n for solids
+            7. Reset parameters
+            8. The total elements condensed (tracked in the total_elements_condensed dict) is the previous plus (stoich * n_i) [using elements_in_solid dict] <- looks to just be a sum of the total number n in the condensed phase
+            9. The percent elements condensed is the total_elements_condensed (number density) value divided by the total number density
+            """
+
             # in_solid is the solid that condenses
             # in_temperature is the temperature at which the solid condenses
             in_solid, in_temp = solids.check_in(

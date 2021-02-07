@@ -42,7 +42,6 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
         # K * prod(P_i) = P_mol.  If P_mol >= 1, then the solid is stable (i.e. log10(1 / KP) < 0)
         # - log10(K) - log10(prod(P_i)) = log(1 / K prod(P_i)) -> raise to power of 10 -> 1 / K prod(P_I)
         condensation_criterion = 1.0 / (K_dict[solid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
-        print(solid_molecule, K_dict[solid_molecule])
         if condensation_criterion < 1:
             # if the partial pressure exceeds the equilibrium constant
             if solid_molecule not in condensing_solids:  # if the condensation criterion has previously been met
@@ -98,3 +97,4 @@ def check_out(condensing_solids, number_density_solids, number_density_solids_ol
             return solid, out_temp
         else:
             return False, False
+    return False, False
