@@ -39,10 +39,12 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
                 if element in number_densities_old.keys():
                     pressure_product_old *= (number_densities_old[element] * R * temperature_old) ** (stoich)
 
+        if solid_molecule == "Al2O3_s":
+            print(solid_molecule, temperature, temperature_old, K_dict[solid_molecule], pressure_product)
         # K * prod(P_i) = P_mol.  If P_mol >= 1, then the solid is stable (i.e. log10(1 / KP) < 0)
         # - log10(K) - log10(prod(P_i)) = log(1 / K prod(P_i)) -> raise to power of 10 -> 1 / K prod(P_I)
         condensation_criterion = 1.0 / (K_dict[solid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
-        if condensation_criterion < 1:
+        if condensation_criterion < 1 and temperature != temperature_old:
             # if the partial pressure exceeds the equilibrium constant
             if solid_molecule not in condensing_solids:  # if the condensation criterion has previously been met
                 condensation_criterion_old = 1.0 / (
@@ -51,8 +53,9 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
                     new_solids.append([solid_molecule, temperature_old])
                 else:  # if the condensation criterion has just been met
                     # interpolate the exact condensation temperature
+                    # f(a) and f(b) must have different signs, so we employ log10 for a change between <1 and >1 (i.e. interpolate around log10(1) = 0)
                     test_temperature = brentq(collect_data.linear_interpol_in, temperature, temperature_old, args=(
-                        temperature, temperature_old, condensation_criterion, condensation_criterion_old),
+                        temperature, temperature_old, log10(condensation_criterion), log10(condensation_criterion_old)),
                                               xtol=0.0000000001)
                     new_solids.append([solid_molecule, test_temperature])
 
@@ -69,7 +72,6 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
             return solid_molecule, test_temperature
         else:
             return False, False
-
     else:
         return False, False
 

@@ -80,21 +80,23 @@ def get_all_condensing_solid_elements_and_molecules(condensing_solids):
     return solid_elements_and_molecules
 
 
-def number_density_element_solid(guess_number_densities, condensing_solids, solid_molecule_library):
+def number_density_element_solid(guess_number_densities, condensing_solids, solid_molecule_library, ordered_names):
     fugacities = ['H', 'Cl', 'F', 'O', 'N']
     solid_number_density = {}
     solids = get_all_condensing_solid_elements_and_molecules(condensing_solids=condensing_solids)
-    for element in solids.keys():
+    for element_group in solids.keys():
+        element = element_group[0]
         mass_balance = 0
-        molecules = solids[element]
+        molecules = solids[element_group]
         for solid_molecule in molecules:
             stoich = solid_molecule_library[solid_molecule]
             for solid_element in stoich:
-                if guess_number_densities[solid_element] > 0:  # negative guesses break the solver
+                index = ordered_names.index(solid_element)
+                if guess_number_densities[index] > 0:  # negative guesses break the solver
                     coeff = stoich[solid_element]
                     if solid_element in fugacities:
                         coeff /= 2.0
-                    mass_balance += coeff * guess_number_densities[solid_element]
+                    mass_balance += coeff * guess_number_densities[index]
                 else:  # force the solver out to re-sample
                     mass_balance = 1e999
         solid_number_density.update({element: mass_balance})

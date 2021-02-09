@@ -31,7 +31,7 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
     gas_element_mass_balance = number_density.number_density_element_gas(
         element_appearances_in_molecules=gas_element_appearances_in_molecules, molecule_library=gas_molecule_library,
         K_dict=K_dict, guess_number_densities=number_density_dict_tmp, temperature=temperature)
-    solid_element_mass_balance = number_density.number_density_element_solid(guess_number_densities=guess_number_density, condensing_solids=condensing_solids, solid_molecule_library=solid_molecules_library)
+    solid_element_mass_balance = number_density.number_density_element_solid(guess_number_densities=guess_number_density, condensing_solids=condensing_solids, solid_molecule_library=solid_molecules_library, ordered_names=ordered_names)
 
     for element in gas_element_mass_balance.keys():
         gas_mb = gas_element_mass_balance[element]
@@ -40,14 +40,12 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
 
             
     for element in solid_element_mass_balance:
-        print("here1")
         solid_mb = solid_element_mass_balance[element]
-        zero = 1 - ((gas_element_mass_balance + solid_mb) / number_densities_dict[element])
+        zero = 1 - ((gas_element_mass_balance[element] + solid_mb) / number_densities_dict[element])
         mass_balance_zero.update({element: zero})
 
     # if there are condensed elements, we want to force its partial pressure (i.e. activity) to 1.
     for solid in condensing_solids:
-        print("here2")
         partial_pressure = number_density.solid_partial_pressure(molecule=solid,
                                                                  guess_number_densities=number_density_dict_tmp,
                                                                  solid_molecules_library=solid_molecules_library,

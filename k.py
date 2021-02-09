@@ -65,7 +65,9 @@ def solid_K_B3(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 
 def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
     molecule_df = pd.read_csv("Data/Janaf/" + molecule + ".dat", header=None, skiprows=2, delimiter="\t",
-                              index_col=False)
+                              index_col=False, dtype="str")
+    molecule_df = molecule_df[~molecule_df[0].str.contains("#")].astype(float)
+
     temperature_ref = molecule_df[0]
     delta_H_ref = molecule_df[4]
     H_ref = molecule_df[5]
