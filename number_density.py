@@ -75,8 +75,8 @@ def get_all_condensing_solid_elements_and_molecules(condensing_solids):
         stoich = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
         for element in stoich:
             if element not in solid_elements_and_molecules.keys():
-                solid_elements_and_molecules.update({element: []})
-            solid_elements_and_molecules[element].append(molecule)
+                solid_elements_and_molecules.update({element[0]: []})
+            solid_elements_and_molecules[element[0]].append(molecule)
     return solid_elements_and_molecules
 
 
@@ -84,10 +84,9 @@ def number_density_element_solid(guess_number_densities, condensing_solids, soli
     fugacities = ['H', 'Cl', 'F', 'O', 'N']
     solid_number_density = {}
     solids = get_all_condensing_solid_elements_and_molecules(condensing_solids=condensing_solids)
-    for element_group in solids.keys():
-        element = element_group[0]
+    for element in solids.keys():
         mass_balance = 0
-        molecules = solids[element_group]
+        molecules = solids[element]
         for solid_molecule in molecules:
             stoich = solid_molecule_library[solid_molecule]
             for solid_element in stoich:

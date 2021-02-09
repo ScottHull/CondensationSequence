@@ -39,8 +39,6 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
                 if element in number_densities_old.keys():
                     pressure_product_old *= (number_densities_old[element] * R * temperature_old) ** (stoich)
 
-        if solid_molecule == "Al2O3_s":
-            print(solid_molecule, temperature, temperature_old, K_dict[solid_molecule], pressure_product)
         # K * prod(P_i) = P_mol.  If P_mol >= 1, then the solid is stable (i.e. log10(1 / KP) < 0)
         # - log10(K) - log10(prod(P_i)) = log(1 / K prod(P_i)) -> raise to power of 10 -> 1 / K prod(P_I)
         condensation_criterion = 1.0 / (K_dict[solid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
@@ -86,7 +84,7 @@ def check_out(condensing_solids, number_density_solids, number_density_solids_ol
             old_solid = -1.
 
         # if the solid's number density falls below the 1^-10 within the iteration, remove it from the system
-        if new_solid <= 1.e-10 and old_solid >= 1.e-10:  # if the new solid
+        if new_solid <= 1.e-10 and old_solid >= 1.e-10:  # if the new solid meets the mole fraction criterion for existance
             out_temp = brentq(collect_data.linear_interpol_out, temperature, temperature_old, args=(
                 temperature, temperature_old, log10(number_density_solids[solid]),
                 log10(number_density_solids_old[solid]), dT),

@@ -177,8 +177,10 @@ class Condensation:
             self.any_in = True
             self.any_out = True
             self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
+            print("Getting K...")
             self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
                              temperature=self.temperature, gas_methods=self.gas_methods)
+            print("Got K!")
 
             self.solve()  # run the root solver
 
@@ -232,8 +234,6 @@ class Condensation:
                 """
 
                 in_solid, in_temp, out_solid, out_temp = self.equilibrate_solids(error_threshold=error_threshold)
-                if in_solid == "Al2O3_s":
-                    print(in_solid, in_temp, out_solid, out_temp)
 
                 if out_solid == False:
                     self.any_out = False
@@ -241,6 +241,7 @@ class Condensation:
 
                 if in_temp > out_temp:  # if the appearance temperature is greater than the disappearance temperature
                     print("IN SOLID: {} ({} K)".format(in_solid, in_temp))
+                    self.temperature = in_temp
                     self.condensing_solids.append(in_solid)
                     self.any_out = False  # a solid has not dropped out
                     self.any_in = True  # there is a new solid in
@@ -250,6 +251,7 @@ class Condensation:
                             self.elements_in_solid.append(s)
                 elif out_temp > in_temp:  # if the disappearance temperature is greater than the appearance temperature
                     print("OUT SOLID: {} ({} K)".format(out_solid, out_temp))
+                    self.temperature = out_temp
                     self.any_out = True  # there are exiting solids
                     self.any_in = False  # there are no new solids
                     self.temperature = out_temp  # set the temperature to the solid-out temperature
@@ -257,6 +259,8 @@ class Condensation:
                     del self.number_densities_solids[out_solid]  # remove the outgoing solid from the solids number density dict
 
                     self.removed_solids.append(out_solid)  # track the exit of the solid
+
+            self.solve()
 
             print("Finished equilibrating potential solids!")
             # get the total number density of the condensed elements
@@ -276,6 +280,7 @@ class Condensation:
             self.previous_removed_solids = self.removed_solids
             self.previous_temperature = self.temperature
             self.temperature -= self.dT
+            print("Stable solids: {}".format(self.condensing_solids))
 
 
 
