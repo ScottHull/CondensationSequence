@@ -54,6 +54,8 @@ class Condensation:
         self.any_out = True
         self.errors = []
 
+        self.tracked_solids = {}  # tracks in and out temperatures of the solid
+
     def solve(self):
         number_densities_from_partial_pressure = self.calculate_mass_balance()
         # list of elements given in the input
@@ -253,6 +255,8 @@ class Condensation:
 
                 if in_temp > out_temp:  # if the appearance temperature is greater than the disappearance temperature
                     print("IN SOLID: {} ({} K)".format(in_solid, in_temp))
+                    if in_solid not in self.tracked_solids.keys():
+                        self.tracked_solids.update({in_solid: {"In Temperature": in_temp, "Out Temperature": None}})
                     self.temperature = in_temp
                     self.condensing_solids.append(in_solid)
                     self.any_out = False  # a solid has not dropped out
@@ -263,6 +267,7 @@ class Condensation:
                             self.elements_in_solid.append(s)
                 elif out_temp > in_temp:  # if the disappearance temperature is greater than the appearance temperature
                     print("OUT SOLID: {} ({} K)".format(out_solid, out_temp))
+                    self.tracked_solids[out_solid]["Out Temperature"] = out_temp
                     self.temperature = out_temp
                     self.any_out = True  # there are exiting solids
                     self.any_in = False  # there are no new solids
