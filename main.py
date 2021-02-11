@@ -47,7 +47,7 @@ class Condensation:
         for element in self.abundances.keys():  # initial setup
             self.percent_element_condensed.update({element: 0})
             self.total_elements_condensed.update({element: 0})
-        
+
         self.any_in = True
         self.any_out = True
         self.errors = []
@@ -56,7 +56,8 @@ class Condensation:
         number_densities_from_partial_pressure = self.calculate_mass_balance()
         # list of elements given in the input
         names = list(self.normalized_abundances.keys())
-        guess_number_density = np.array([self.number_densities[p] for p in names])  # a list of abundances corresponding to the elements list
+        guess_number_density = np.array(
+            [self.number_densities[p] for p in names])  # a list of abundances corresponding to the elements list
         if not self.initial:
             # a list of abundances corresponding to the elements list
             for s in self.condensing_solids:
@@ -75,10 +76,6 @@ class Condensation:
                                          number_densities.x))  # make a dictionary where the element is the key and the activity is the value
         self.errors = mass_balance.mass_balance(number_densities.x, *args)
         print("Solved system!")
-        if len(self.condensing_solids) > 0:
-            print(self.number_densities)
-            sys.exit()
-
 
     def normalize_abundances(self, abundances):
         # norm = {}
@@ -118,7 +115,6 @@ class Condensation:
             mass_balance_from_pp.update({element: N_i})
         return mass_balance_from_pp
 
-
     def equilibrate_solids(self, error_threshold):
         # in_solid is the solid that condenses
         # in_temperature is the temperature at which the solid condenses
@@ -154,7 +150,6 @@ class Condensation:
 
         return in_solid, in_temp, out_solid, out_temp
 
-
     def sequence(self):
         """
         Partial pressure: (n_i / n_total) * (P_total / RT)
@@ -175,7 +170,6 @@ class Condensation:
                          temperature=self.temperature, gas_methods=self.gas_methods)
         self.mass_balance = self.calculate_mass_balance()
 
-
         # a list of abundances corresponding to the elements list
         self.number_densities = self.mass_balance
 
@@ -195,7 +189,8 @@ class Condensation:
             # the sum of all number densities across gasses and solids
             total_N = total_atoms.calculate_total_N(
                 gas_element_appearances_in_molecules=self.element_gas_appearances,  # all active gas molecules in system
-                solid_element_appearances_in_molecules=self.element_solid_appearances,  # all active solid molecules in system
+                solid_element_appearances_in_molecules=self.element_solid_appearances,
+                # all active solid molecules in system
                 element_number_densities=self.number_densities,  # computed elemental number densities from root finder
                 condensing_solids=self.condensing_solids,  # list of all condensing solids
                 gas_molecule_library=self.gas_molecules_library,  # stoich library for all supported gas molecules
@@ -259,8 +254,10 @@ class Condensation:
                     self.any_out = True  # there are exiting solids
                     self.any_in = False  # there are no new solids
                     self.temperature = out_temp  # set the temperature to the solid-out temperature
-                    self.condensing_solids.remove(out_solid)  # remove the outgoing solid from the condensing solids list
-                    del self.number_densities_solids[out_solid]  # remove the outgoing solid from the solids number density dict
+                    self.condensing_solids.remove(
+                        out_solid)  # remove the outgoing solid from the condensing solids list
+                    del self.number_densities_solids[
+                        out_solid]  # remove the outgoing solid from the solids number density dict
 
                     self.removed_solids.append(out_solid)  # track the exit of the solid
 
@@ -290,16 +287,6 @@ class Condensation:
             self.previous_temperature = self.temperature
             self.temperature -= self.dT
             print("Stable solids: {}".format(self.condensing_solids))
-
-
-
-
-
-
-
-
-
-
 
 
 a = {'Ni': 1.66e+16, 'C': 2.692e+18, 'F': 363100000000000.0, 'H': 1e+22, 'K': 1072000000000000.0,

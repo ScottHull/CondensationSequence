@@ -31,13 +31,16 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
     gas_element_mass_balance = number_density.number_density_element_gas(
         element_appearances_in_molecules=gas_element_appearances_in_molecules, molecule_library=gas_molecule_library,
         K_dict=K_dict, guess_number_densities=number_density_dict_tmp, temperature=temperature)
-    solid_element_mass_balance = number_density.number_density_element_solid(guess_number_densities=guess_number_density, condensing_solids=condensing_solids, solid_molecule_library=solid_molecules_library, ordered_names=ordered_names)
+    solid_element_mass_balance = number_density.number_density_element_solid(number_densities=number_density_dict_tmp,
+                                                                             condensing_solids=condensing_solids,
+                                                                             solid_molecule_library=solid_molecules_library,
+                                                                             ordered_names=ordered_names)
 
     for element in gas_element_mass_balance.keys():
         gas_mb = gas_element_mass_balance[element]
-        zero = log10(number_densities_dict[element]) - log10(gas_mb)  # want the difference between the partial pressure proportionality and calculated number density to be 0, or the ratio to be 1, log10 helps speed calculation
+        zero = log10(number_densities_dict[element]) - log10(
+            gas_mb)  # want the difference between the partial pressure proportionality and calculated number density to be 0, or the ratio to be 1, log10 helps speed calculation
         mass_balance_zero.update({element: zero})
-
 
     if len(condensing_solids) > 0:  # only perform if there are any condensing solids
         for element in solid_element_mass_balance:
@@ -50,12 +53,12 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
         partial_pressure = number_density.solid_partial_pressure(molecule=solid,
                                                                  guess_number_densities=number_density_dict_tmp,
                                                                  solid_molecules_library=solid_molecules_library,
-                                                                 temperature=temperature)
-        solid_criterion_zero = 1.0 - (partial_pressure * K_dict[solid])
+                                                                 temperature=temperature)  # partial pressure product of component elements
+        # solid_criterion_zero = 1.0 - (log10(partial_pressure) / -log10(K_dict[solid]))
+        solid_criterion_zero = 1.0 - (partial_pressure * K_dict[solid])  # P_mol = K * prod(P_componets), want P_mol = 1 (i.e. activity = 1) for condensation criterion
         mass_balance_zero.update({solid: solid_criterion_zero})
-        
+
     ordered_mass_balance_zero = [mass_balance_zero[name] for name in ordered_names]
 
     # the aim is to return 0's, which the solver will work to find
     return ordered_mass_balance_zero
-

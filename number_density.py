@@ -55,7 +55,7 @@ def number_density_element_gas(element_appearances_in_molecules, molecule_librar
                     if component_element != element:  # only multiply by stoich coefficient if this is the element in focus
                         component_stoich = 1
                     molecule_number_density *= component_stoich * (
-                                guess_number_densities[component_element] * R * temperature) ** power
+                            guess_number_densities[component_element] * R * temperature) ** power
                 else:  # force the solver to re-guess
                     molecule_number_density = 1e999
                     break
@@ -80,7 +80,7 @@ def get_all_condensing_solid_elements_and_molecules(condensing_solids):
     return solid_elements_and_molecules
 
 
-def number_density_element_solid(guess_number_densities, condensing_solids, solid_molecule_library, ordered_names):
+def number_density_element_solid(number_densities, condensing_solids, solid_molecule_library, ordered_names):
     fugacities = ['H', 'Cl', 'F', 'O', 'N']
     solid_number_density = {}
     solids = get_all_condensing_solid_elements_and_molecules(condensing_solids=condensing_solids)
@@ -89,12 +89,11 @@ def number_density_element_solid(guess_number_densities, condensing_solids, soli
         molecules = solids[element]
         for solid_molecule in molecules:
             stoich = solid_molecule_library[solid_molecule]
-            index = ordered_names.index(element)
-            if guess_number_densities[index] > 0:  # negative guesses break the solver
+            if number_densities[solid_molecule] > 0:  # negative guesses break the solver
                 coeff = stoich[element]
                 if element in fugacities:
                     coeff /= 2.0
-                mass_balance += coeff * guess_number_densities[index]
+                mass_balance += coeff * number_densities[solid_molecule]
             else:  # force the solver out to re-sample
                 mass_balance = 1e999
         solid_number_density.update({element: mass_balance})

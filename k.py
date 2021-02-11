@@ -87,7 +87,7 @@ def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
         return K
     else:
         # data in table is given as log10(K)
-        K = 10**collect_data.lookup_and_interpolate(temperature_ref, K_ref, temperature)
+        K = 10 ** collect_data.lookup_and_interpolate(temperature_ref, K_ref, temperature)
         return K
 
 
