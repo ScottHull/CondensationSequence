@@ -11,18 +11,17 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
     This function takes guess number densities as an input and attempts to force the outputs to 0
     in order to find the roots, i.e. the "real" number densities.  The root finder then returns a
     list of the "real" number densities by exercising this function.
-    :param guess_number_density: The initial guess for the algorithm to proceed.
-    :param ordered_names: A list of gas *elements* and condensed solid *molecules*.
-    :param gas_element_appearances_in_molecules:
-    :param gas_molecule_library:
-    :param K_dict:
-    :param number_densities_dict:  We force n_i to produce N_el to match equation 5 of Unterborn & Panero 2017.
-    :param temperature:
-    :param condensing_solids:
-    :return:
+
+    The gas number density solver works through application of the ideal gas law, and the 0 criterion enforces that the
+    mass balance of the gas element calculated through the partial pressure proportionality
+    (equation 5, Unterborn & Panero 2017) and the ideal gas law calculated done here are equivalent.
+
+    The solid number density solver works by assuming that the mass balance of the solid molecule is a direct
+    proportionality between the guessed solid molecule number density and its elemental stoichiometry.  We then adjust
+    the guess by forcing the partial pressure of the molecule to be 1.
     """
 
-    mass_balance_zero = {}  # force zero to be 0
+    mass_balance_zero = {}  # the y-values of the function with number densities as the x-input, want to be all 0's so that the x-values are roots.
     number_density_dict_tmp = {}  # the guess_number_density list is adjusted by the algorithm per iteration, so need to rebuild a temperature dictionary during each internal loop
     for index, element in enumerate(ordered_names):
         number_density_dict_tmp.update({element: guess_number_density[index]})
@@ -30,11 +29,11 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
     # calculate gas element number density through guesses
     gas_element_mass_balance = number_density.number_density_element_gas(
         element_appearances_in_molecules=gas_element_appearances_in_molecules, molecule_library=gas_molecule_library,
-        K_dict=K_dict, guess_number_densities=number_density_dict_tmp, temperature=temperature)
+        K_dict=K_dict, guess_number_densities=number_density_dict_tmp, temperature=temperature)  # application of the ideal gas law
     solid_element_mass_balance = number_density.number_density_element_solid(number_densities=number_density_dict_tmp,
                                                                              condensing_solids=condensing_solids,
                                                                              solid_molecule_library=solid_molecules_library,
-                                                                             ordered_names=ordered_names)
+                                                                             ordered_names=ordered_names)  # mass balance by a direct relationship between the guessed number density and the elemental stoichiometry
 
     for element in gas_element_mass_balance.keys():
         gas_mb = gas_element_mass_balance[element]
@@ -54,7 +53,6 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
                                                                  guess_number_densities=number_density_dict_tmp,
                                                                  solid_molecules_library=solid_molecules_library,
                                                                  temperature=temperature)  # partial pressure product of component elements
-        # solid_criterion_zero = 1.0 - (log10(partial_pressure) / -log10(K_dict[solid]))
         solid_criterion_zero = 1.0 - (partial_pressure * K_dict[solid])  # P_mol = K * prod(P_componets), want P_mol = 1 (i.e. activity = 1) for condensation criterion
         mass_balance_zero.update({solid: solid_criterion_zero})
 
