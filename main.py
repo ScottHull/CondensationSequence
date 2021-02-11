@@ -75,6 +75,9 @@ class Condensation:
                                          number_densities.x))  # make a dictionary where the element is the key and the activity is the value
         self.errors = mass_balance.mass_balance(number_densities.x, *args)
         print("Solved system!")
+        if len(self.condensing_solids) > 0:
+            print(self.number_densities)
+            sys.exit()
 
 
     def normalize_abundances(self, abundances):
