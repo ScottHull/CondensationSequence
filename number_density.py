@@ -74,9 +74,10 @@ def get_all_condensing_solid_elements_and_molecules(condensing_solids):
     for molecule in condensing_solids:
         stoich = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
         for element in stoich:
+            element = element[0]  # get the element name from the element-stoich tuple returned by the re function
             if element not in solid_elements_and_molecules.keys():
-                solid_elements_and_molecules.update({element[0]: []})
-            solid_elements_and_molecules[element[0]].append(molecule)
+                solid_elements_and_molecules.update({element: []})
+            solid_elements_and_molecules[element].append(molecule)
     return solid_elements_and_molecules
 
 
@@ -115,47 +116,3 @@ def solid_partial_pressure(molecule, guess_number_densities, solid_molecules_lib
             molecule_partial_pressure *= (guess_number_densities[element] * R * temperature) ** coeff
     return molecule_partial_pressure
 
-
-def mass_balance_original(element_appearances_in_molecules, molecule_library, K_dict, partial_pressures,
-                          temperature, R=8.3144621e-2):
-    fugacities = ['H', 'Cl', 'F', 'O', 'N']
-    RT = R * temperature
-    out_dict = {}
-    # print guess_dict
-    for i in element_appearances_in_molecules.keys():  # for element, gas appearance molecule in element dict
-        j = element_appearances_in_molecules[i]
-        out = 0.
-        for k in j:  # for gas molecule in the list
-            # print k
-            coefs = molecule_library.get(k)  # get the stoich of the gas molecule
-            entry = 0.
-            for x in coefs.keys():  # for element, stoich in the dict
-                y = coefs[x]
-                if partial_pressures[x] <= 0.:
-                    entry = 1.e999
-                    break
-                else:
-                    if x == i:  # if the stoich element equals the input element
-                        if x in fugacities:
-                            # sum [  (nu_i / 2) * log(P_i * R * T + log(nu_i) ] -> raise to power of 10 -> sum [  nu_i (P_i * R * T)^(n_i / 2)  ]
-                            # entry += y * (partial_pressures[x] * RT)**(y / 2.0)
-                            entry = entry + ((y / 2.) * log10(partial_pressures.get(x) * RT) + log10(y))
-                        else:  # sum  [ nu_i * log(P_I * R * T) + log(y) ] -> raise to power of 10 -> sum [  nu_i (P_i * R * T)^(n_i)  ]
-                            # entry += y * (partial_pressures[x] * RT)**y
-                            entry += (y * log10(partial_pressures.get(x) * RT) + log10(y))
-                    else:  # if the stoich element does NOT equal the input element
-                        if x in fugacities:  # sum [  (n_i / 2) * log(P_i * R * T)  ]  -> raise to power of 10 ->  sum [  (P_i * R * T)^(n_i / 2)  ]
-                            # entry += (partial_pressures[x] * RT)**(y / 2.0)
-                            entry = entry + ((y / 2.) * log10(partial_pressures.get(x) * RT))
-                        else:  # sum [  (n_i) * log(P_i * R * T)  ]  -> raise to power of 10 ->  sum [  (P_i * R * T)^(n_i)  ]
-                            # entry += (partial_pressures[x] * RT)**y
-                            entry = entry + (y * log10(partial_pressures.get(x) * RT))
-            # sum((P_i R T)^nu_i) + K/RT
-            # entry += K_dict[k] / RT
-            # if entry = (y * log10(partial_pressures.get(x) * RT) + log10(y)), then below entry = K
-            entry = entry + (log10(K_dict.get(k))) - log10(RT)
-            entry = pow(10., entry)
-            out += entry
-
-        out_dict.update({i: out})
-    return out_dict

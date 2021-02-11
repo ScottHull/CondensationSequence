@@ -85,7 +85,7 @@ def check_out(condensing_solids, number_density_solids, number_density_solids_ol
             old_solid = -1.
 
         # if the solid's number density falls below the 1^-10 within the iteration, remove it from the system
-        if new_solid <= 1.e-10 and old_solid >= 1.e-10:  # if the new solid meets the mole fraction criterion for existance
+        if new_solid <= 1.e-10 and old_solid > 1.e-10:  # if the new solid meets the mole fraction criterion for existance
             out_temp = brentq(collect_data.linear_interpol_out, temperature, temperature_old, args=(
                 temperature, temperature_old, log10(number_density_solids[solid]),
                 log10(number_density_solids_old[solid]), dT),

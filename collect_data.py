@@ -51,7 +51,9 @@ def linear_interpol_out(x, *args):
 
 
 def lookup_and_interpolate(table_x, table_y, x_value):
-    idx = bisect.bisect_left(table_x, x_value) - 1
+    table_x = list(table_x)
+    table_y = list(table_y)
+    idx = bisect.bisect_left(list(table_x), x_value) - 1
     if idx < 0:
         return table_y[0]
     elif (idx < len(table_x) - 1):

@@ -69,12 +69,13 @@ def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appear
             molecules = solid_element_appearances_in_molecules[
                 atom]  # retrieve the molecules in which the element exists
             for molecule in molecules:  # loop through all molecules in which the element appears
-                K = K_dict[molecule]  # get the equilibrium constant
-                molecule_stoich = solid_molecule_library[molecule]  # retrieve the molecule stoichiometry
-                for component_atom in molecule_stoich.keys():
-                    stoich = molecule_stoich[component_atom]
-                    num = stoich * element_number_densities[component_atom]  # calcualte number density
-                    number_density_solid[atom] += num  # sum the number density
+                if molecule in condensing_solids:
+                    K = K_dict[molecule]  # get the equilibrium constant
+                    molecule_stoich = solid_molecule_library[molecule]  # retrieve the molecule stoichiometry
+                    for component_atom in molecule_stoich.keys():
+                        stoich = molecule_stoich[component_atom]
+                        num = stoich * element_number_densities[molecule]  # calculate number density
+                        number_density_solid[atom] += num  # sum the number density
 
     total_pressure = sum(number_density_gas.values()) + sum(number_density_solid.values())
     return total_pressure

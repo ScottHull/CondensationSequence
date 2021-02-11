@@ -6,6 +6,7 @@ import total_atoms
 import numpy as np
 from scipy.optimize import root
 from math import sqrt
+import copy
 import sys
 
 
@@ -41,6 +42,7 @@ class Condensation:
         self.number_densities = {}  # element number densities
         self.previous_number_densities = {}  # tracks number density solution from the previous temperature iteration
         self.number_densities_solids = {}  # number densities of all solids
+        self.previous_number_densities_solids = {}  # number densities of all solids
         self.elements_in_solid = []  # all elements currently occupying a condensing solid
         self.total_elements_condensed = {}  # tracks the number density of all elements in the condensed phase
         self.percent_element_condensed = {}
@@ -55,14 +57,15 @@ class Condensation:
     def solve(self):
         number_densities_from_partial_pressure = self.calculate_mass_balance()
         # list of elements given in the input
-        names = list(self.normalized_abundances.keys())
+        names = list(self.number_densities.keys())
         guess_number_density = np.array(
             [self.number_densities[p] for p in names])  # a list of abundances corresponding to the elements list
         if not self.initial:
             # a list of abundances corresponding to the elements list
             for s in self.condensing_solids:
-                names.append(s)
-                guess_number_density = np.append(guess_number_density, 1.e-13)  # append a guess for all existing solids
+                if s not in names:
+                    names.append(s)
+                    guess_number_density = np.append(guess_number_density, 1.e-13)  # append a guess for all existing solids
         self.initial = False
         args = (names, self.element_gas_appearances, self.gas_molecules_library, self.K,
                 number_densities_from_partial_pressure,
@@ -139,8 +142,8 @@ class Condensation:
             in_temp = 0
 
         out_solid, out_temp = solids.check_out(condensing_solids=self.condensing_solids,
-                                               number_density_solids=self.number_densities,
-                                               number_density_solids_old=self.previous_number_densities,
+                                               number_density_solids=self.number_densities_solids,
+                                               number_density_solids_old=self.previous_number_densities_solids,
                                                temperature=self.temperature,
                                                temperature_old=self.previous_temperature)
 
@@ -148,7 +151,31 @@ class Condensation:
             self.any_out = False
             out_temp = 0
 
+        # if self.temperature < 1692 and self.temperature > 1685:
+        #     print(self.temperature, in_temp, in_solid, out_temp, out_solid)
+        #     print(self.number_densities)
+        # elif self.temperature < 1685:
+        #     sys.exit()
+
         return in_solid, in_temp, out_solid, out_temp
+    
+    def calcuate_solid_number_density(self):
+        # the sum of all number densities across gasses and solids
+        total_N = total_atoms.calculate_total_N(
+            gas_element_appearances_in_molecules=self.element_gas_appearances,  # all active gas molecules in system
+            solid_element_appearances_in_molecules=self.element_solid_appearances, # all active solid molecules in system
+            element_number_densities=self.number_densities,  # computed elemental number densities from root finder
+            condensing_solids=self.condensing_solids,  # list of all condensing solids
+            gas_molecule_library=self.gas_molecules_library,  # stoich library for all supported gas molecules
+            solid_molecule_library=self.solid_molecules_library,  # stoich library for all supported solid molecules
+            K_dict=self.K,  # all equilibrium constants
+            temperature=self.temperature,
+        )
+        
+        for i in self.condensing_solids:
+            # the solid number density is equal to the fractional number density of the molecule?
+            self.number_densities_solids.update({i: self.number_densities[i] / total_N})
+            # print(i, self.number_densities[i], total_N, self.number_densities[i] / total_N)
 
     def sequence(self):
         """
@@ -186,22 +213,8 @@ class Condensation:
 
             self.solve()  # run the root solver
 
-            # the sum of all number densities across gasses and solids
-            total_N = total_atoms.calculate_total_N(
-                gas_element_appearances_in_molecules=self.element_gas_appearances,  # all active gas molecules in system
-                solid_element_appearances_in_molecules=self.element_solid_appearances,
-                # all active solid molecules in system
-                element_number_densities=self.number_densities,  # computed elemental number densities from root finder
-                condensing_solids=self.condensing_solids,  # list of all condensing solids
-                gas_molecule_library=self.gas_molecules_library,  # stoich library for all supported gas molecules
-                solid_molecule_library=self.solid_molecules_library,  # stoich library for all supported solid molecules
-                K_dict=self.K,  # all equilibrium constants
-                temperature=self.temperature,
-            )
-
-            for i in self.condensing_solids:
-                # the solid number density is equal to the fractional number density of the molecule?
-                self.number_densities_solids.update({i: self.number_densities[i] / total_N})
+            # calculate solid number densities
+            self.calcuate_solid_number_density()
 
             # make sure that the guess number densities return 0's, or very very close to 0's.
             error_threshold = sqrt(sum([i ** 2 for i in self.errors]))
@@ -258,6 +271,7 @@ class Condensation:
                         out_solid)  # remove the outgoing solid from the condensing solids list
                     del self.number_densities_solids[
                         out_solid]  # remove the outgoing solid from the solids number density dict
+                    del self.number_densities[out_solid]
 
                     self.removed_solids.append(out_solid)  # track the exit of the solid
 
@@ -267,6 +281,9 @@ class Condensation:
                                  temperature=self.temperature, gas_methods=self.gas_methods)
                 self.mass_balance = self.calculate_mass_balance()
                 self.solve()
+
+            # calculate solid number densities
+            self.calcuate_solid_number_density()
 
             print("Finished equilibrating potential solids!")
             # get the total number density of the condensed elements
@@ -281,9 +298,10 @@ class Condensation:
                 element_number_density = self.total_elements_condensed[element]
                 self.percent_element_condensed[element] = element_number_density / self.mass_balance[element]
 
-            self.previous_number_densities = self.number_densities
-            self.previous_K = self.K
-            self.previous_removed_solids = self.removed_solids
+            self.previous_number_densities = copy.copy(self.number_densities)
+            self.previous_number_densities_solids = copy.copy(self.number_densities_solids)
+            self.previous_K = copy.copy(self.K)
+            self.previous_removed_solids = copy.copy(self.removed_solids)
             self.previous_temperature = self.temperature
             self.temperature -= self.dT
             print("Stable solids: {}".format(self.condensing_solids))
@@ -295,7 +313,7 @@ a = {'Ni': 1.66e+16, 'C': 2.692e+18, 'F': 363100000000000.0, 'H': 1e+22, 'K': 10
      'Ca': 2.188e+16, 'Si': 3.236e+17, 'Al': 2.818e+16, 'Ar': 2.512e+16, 'Fe': 3.162e+17, 'Na': 1.738e+16,
      'Cr': 4365000000000000.0, 'He': 8.511e+20}
 c = Condensation(
-    start_temperature=1732,
+    start_temperature=1506,
     end_temperature=200,
     abundances=a,
     total_pressure=1 * 10 ** -3

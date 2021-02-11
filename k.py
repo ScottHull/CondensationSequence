@@ -7,6 +7,9 @@ import sys
 
 
 def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
+    """
+    Calculate the K equilibrium constant values of solid molecules based on the fitted input parameters.
+    """
     atoms_in_molecule = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
     reference_correction = 0.
 
@@ -103,18 +106,21 @@ def solid_K_R(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 
 
 def get_K_solids(temperature):
+    """
+    Initial function for calculating the K equilibrium constant values of solid molecules.
+    """
     K_dict = {}
     molecules = pd.read_csv("Data/Solids/Solids_Cp.dat", delimiter="\t", header=None, skiprows=1, index_col=False)
 
-    for m in molecules.index:
-        molecule = molecules[0][m]
-        method = molecules[1][m]
-        delta_H = molecules[2][m]
-        S0 = molecules[3][m]
-        k0 = molecules[4][m]
-        k1 = molecules[5][m]
-        k2 = molecules[6][m]
-        k3 = molecules[7][m]
+    for row in molecules.itertuples(index=False):
+        molecule = row[0]
+        method = row[1]
+        delta_H = row[2]
+        S0 = row[3]
+        k0 = row[4]
+        k1 = row[5]
+        k2 = row[6]
+        k3 = row[7]
         K = 0
 
         if method == 'B8' or method == 'B5' or method == 'JB':
@@ -222,9 +228,7 @@ def gas_P(temperature, molecule, R=8.3144621):
     path_molecule = open("Data/Gasses/" + molecule + ".dat", "r")
     Temp_ref = []
     del_G_ref = []
-    del_H_ref = []
-    S_ref = []
-    H_ref = []
+
     for aRow in path_molecule:
         values = aRow.split('\t')
         if not aRow.startswith('#'):
@@ -269,10 +273,7 @@ def gas_P(temperature, molecule, R=8.3144621):
 
 def get_K_gas(molecules, methods, temperature):
     """
-    Returns a dictionary of reference K values relative to the given temperature.
-    :param molecules:
-    :param temperature:
-    :return:
+    The initial function for calculating the K equilibrium constants for gasses.
     """
     K_gas = {}
     for m in molecules:
@@ -293,6 +294,9 @@ def get_K_gas(molecules, methods, temperature):
 
 
 def get_K(gas_molecules, gas_methods, solid_molecules, temperature):
+    """
+    Returns a dictionary of all K equilibrium constants for both solid molecules (ending with _s) and gas molecules.
+    """
     K_gas = get_K_gas(molecules=gas_molecules.keys(), methods=gas_methods, temperature=temperature)
     K_solids = get_K_solids(temperature=temperature)
     K_dict = K_gas.copy()
