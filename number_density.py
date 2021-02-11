@@ -89,28 +89,31 @@ def number_density_element_solid(guess_number_densities, condensing_solids, soli
         molecules = solids[element]
         for solid_molecule in molecules:
             stoich = solid_molecule_library[solid_molecule]
-            for solid_element in stoich:
-                index = ordered_names.index(solid_element)
-                if guess_number_densities[index] > 0:  # negative guesses break the solver
-                    coeff = stoich[solid_element]
-                    if solid_element in fugacities:
-                        coeff /= 2.0
-                    mass_balance += coeff * guess_number_densities[index]
-                else:  # force the solver out to re-sample
-                    mass_balance = 1e999
+            index = ordered_names.index(element)
+            if guess_number_densities[index] > 0:  # negative guesses break the solver
+                coeff = stoich[element]
+                if element in fugacities:
+                    coeff /= 2.0
+                mass_balance += coeff * guess_number_densities[index]
+            else:  # force the solver out to re-sample
+                mass_balance = 1e999
         solid_number_density.update({element: mass_balance})
     return solid_number_density
 
 
 def solid_partial_pressure(molecule, guess_number_densities, solid_molecules_library, temperature, R=8.3144621e-2):
     fugacities = ['H', 'Cl', 'F', 'O', 'N']
-    molecule_partial_pressure = 0
+    molecule_partial_pressure = 1
     stoich = solid_molecules_library[molecule]
     for element in stoich.keys():
-        coeff = stoich[element]
-        if element in fugacities:
-            coeff /= 2.0
-        molecule_partial_pressure += guess_number_densities[element] ** coeff
+        if guess_number_densities[element] < 0:  # kick solver if it is guessing negative values
+            molecule_partial_pressure = 1e999
+            break
+        else:
+            coeff = stoich[element]
+            if element in fugacities:
+                coeff /= 2.0
+            molecule_partial_pressure *= (guess_number_densities[element] * R * temperature) ** coeff
     return molecule_partial_pressure
 
 

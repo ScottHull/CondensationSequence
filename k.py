@@ -274,7 +274,6 @@ def get_K_gas(molecules, methods, temperature):
     :param temperature:
     :return:
     """
-    R = 8.3144621
     K_gas = {}
     for m in molecules:
         method = methods[m]  # define method for determining K value (i.e. J = JANAF)

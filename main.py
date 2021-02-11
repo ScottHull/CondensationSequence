@@ -131,10 +131,11 @@ class Condensation:
             removed_solids=self.removed_solids,
             removed_solids_old=self.previous_removed_solids
         )
+
         if error_threshold > 1 * 10 ** -13:  # if the error is smaller than the threshold
             in_solid = False
             in_temp = 0
-        if in_solid == False:  # ???
+        if not in_solid:  # ???
             self.any_in = False  # break out of check-in loop
             in_temp = 0
 
@@ -143,6 +144,10 @@ class Condensation:
                                                number_density_solids_old=self.previous_number_densities,
                                                temperature=self.temperature,
                                                temperature_old=self.previous_temperature)
+
+        if not out_solid:
+            self.any_out = False
+            out_temp = 0
 
         return in_solid, in_temp, out_solid, out_temp
 
@@ -235,10 +240,6 @@ class Condensation:
 
                 in_solid, in_temp, out_solid, out_temp = self.equilibrate_solids(error_threshold=error_threshold)
 
-                if out_solid == False:
-                    self.any_out = False
-                    out_temp = 0
-
                 if in_temp > out_temp:  # if the appearance temperature is greater than the disappearance temperature
                     print("IN SOLID: {} ({} K)".format(in_solid, in_temp))
                     self.temperature = in_temp
@@ -260,7 +261,12 @@ class Condensation:
 
                     self.removed_solids.append(out_solid)  # track the exit of the solid
 
-            self.solve()
+            if self.any_out or self.any_in:  # if there are any solids introduced or dropped by the above loop
+                self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
+                self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
+                                 temperature=self.temperature, gas_methods=self.gas_methods)
+                self.mass_balance = self.calculate_mass_balance()
+                self.solve()
 
             print("Finished equilibrating potential solids!")
             # get the total number density of the condensed elements
