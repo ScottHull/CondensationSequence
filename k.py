@@ -170,7 +170,6 @@ def gas_J(temperature, molecule, R=8.3144621):
         # K = exp(-deltaG / RT)
         # Note: 10**((-deltaG / RT) * log10(exp(1))) = exp(-deltaG / RT)
         # Therefore, ln(K) = (-deltaG / RT) * log10(exp(1))
-
         K = exp(-delta_G_gas / (R * temperature))
         return K
     else:
@@ -293,12 +292,57 @@ def get_K_gas(molecules, methods, temperature):
     return K_gas  # returns a dict of all K values for gasses
 
 
-def get_K(gas_molecules, gas_methods, solid_molecules, temperature):
+def liquid_J(temperature, molecule, R=8.3144621):
+    """
+    Calculates K for gasses with the JANAF regime.
+    :param temperature:
+    :param molecule:
+    :param R:
+    :return:
+    """
+    path_molecule = pd.read_csv("Data/Liquids/" + molecule + ".dat", delimiter="\t", skiprows=2, header=None,
+                                index_col=False)
+    reference_temperature = path_molecule[0]
+    delta_G_ref = path_molecule[6]
+    delta_G_gas = collect_data.lookup_and_interpolate(reference_temperature, delta_G_ref,
+                                                      temperature) * 1000  # interpolate deltaG
+    if temperature < reference_temperature.iloc[-1]:
+        # delta G = -RT ln(k)
+        # ln(k) = -deltaG / RT
+        # K = exp(-deltaG / RT)
+        # Note: 10**((-deltaG / RT) * log10(exp(1))) = exp(-deltaG / RT)
+        # Therefore, ln(K) = (-deltaG / RT) * log10(exp(1))
+        K = exp(-delta_G_gas / (R * temperature))
+        return K
+    else:
+        return 0
+
+
+def get_K_liquid(molecules, temperature):
+    """
+    The initial function for calculating the K equilibrium constants for liquids.
+    """
+    K_liquid = {}
+    for m in molecules:
+        method = "J"  # assuming JANAF interpolation is only valid, can implement other methods later
+        if method == "J":
+            K = liquid_J(temperature=temperature, molecule=m)
+            K_liquid.update({m: K})
+    return K_liquid
+
+
+def get_K(gas_molecules, gas_methods, solid_molecules, liquid_molecules, temperature, solid, liquid, gas):
     """
     Returns a dictionary of all K equilibrium constants for both solid molecules (ending with _s) and gas molecules.
     """
-    K_gas = get_K_gas(molecules=gas_molecules.keys(), methods=gas_methods, temperature=temperature)
-    K_solids = get_K_solids(temperature=temperature)
-    K_dict = K_gas.copy()
-    K_dict.update(K_solids)
+    K_dict = {}
+    if gas:
+        K_gas = get_K_gas(molecules=gas_molecules.keys(), methods=gas_methods, temperature=temperature)
+        K_dict.update(K_gas)
+    if liquid:
+        K_liquid = get_K_liquid(molecules=liquid_molecules.keys(), temperature=temperature)
+        K_dict.update(K_liquid)
+    if solid:
+        K_solids = get_K_solids(temperature=temperature)
+        K_dict.update(K_solids)
     return K_dict
