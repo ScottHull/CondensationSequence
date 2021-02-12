@@ -121,6 +121,14 @@ class Condensation:
         return mass_balance_from_pp
 
     def equilibrate_solids(self, error_threshold):
+        """
+        solids.check_in: returns the incoming solid and the interpolated temperature at which it appears.  If no new
+            solid appears, it will return False and self.any_in will be set to True, thereby breaking the while loop
+            outside of this function.
+        solids.check_out: Will trigger the removal of a solid from the system if it falls below the threshold number
+            density, thereby also returning its removal temperature.
+        """
+
         # in_solid is the solid that condenses
         # in_temperature is the temperature at which the solid condenses
         in_solid, in_temp = solids.check_in(
@@ -139,7 +147,7 @@ class Condensation:
         if error_threshold > 1 * 10 ** -13:  # if the error is smaller than the threshold
             in_solid = False
             in_temp = 0
-        if not in_solid:  # ???
+        if not in_solid:  # if there is no new solid entering, break the loop
             self.any_in = False  # break out of check-in loop
             in_temp = 0
 
@@ -179,6 +187,23 @@ class Condensation:
             self.number_densities_solids.update({i: self.number_densities[i] / total_N})
             # print(i, self.number_densities[i], total_N, self.number_densities[i] / total_N)
 
+    def calculate_percentage_condensed(self):
+        # get the total number density of the condensed elements
+        for s in self.condensing_solids:
+            solid_stoich = self.solid_molecules_library[s]
+            for element in solid_stoich:
+                stoich = solid_stoich[element]
+                element_number_density = self.number_densities[element]
+                self.total_elements_condensed[element] += stoich * element_number_density
+
+        for element in self.total_elements_condensed:
+            element_number_density = self.total_elements_condensed[element]
+            self.percent_element_condensed[element] = element_number_density / self.mass_balance[element]
+
+        print("Percent element condensed:")
+        print(self.percent_element_condensed)
+
+
     def sequence(self):
         """
         Partial pressure: (n_i / n_total) * (P_total / RT)
@@ -203,7 +228,6 @@ class Condensation:
         self.number_densities = self.mass_balance
 
         while self.temperature > self.end_temperature:
-            print("Entering solution loop...")
             print("AT TEMPERATURE: {}".format(self.temperature))
             self.any_in = True
             self.any_out = True
@@ -224,35 +248,10 @@ class Condensation:
             # check in stable solid molecules into the system
             while self.any_in and self.any_out:  # enter a while loop
                 print("Equilibrating potential solids...")
-                """
-                Within this while loop, the following occurs
-                1. Check in solids
-                2. Check out solids
-                3. If check in temp > check out temp: (check in solid)
-                    a. Get total N (final)
-                    b. Append solid to condensing solids list
-                    c. Set self.any_out to False and self.any_in to True (there are new solids)
-                    d. Append solid elements to "elements_in_solids" list if it doesn't already exist
-                    e. Adjust guesses based on solid in order to keep the solver moving
-                    f. Append solid to Name and guess
-                    g. Reset parameters so that the next loop has the updated information
-                    h. Recalculate abundance and guess number density
-                4. If check out temp > check in temp: (check out solid)
-                    a. Set self.any_out to True and self.any_in to False
-                    b. Remove solid from condensing_solids list, num_solids dict, guess_dict, append to removed solids list
-                    c. Recalculate abundance and guess number density
-                    d. Reset parameters so that the next loop has the updated information
-                5. If self.any_in is True or self.any_out is True (solids have entered or left the system)
-                    a. Recalculate K
-                    b. Recalculate n_i with root solver
-                6. Recalculate n for solids
-                7. Reset parameters
-                8. The total elements condensed (tracked in the total_elements_condensed dict) is the previous plus (stoich * n_i) [using elements_in_solid dict] <- looks to just be a sum of the total number n in the condensed phase
-                9. The percent elements condensed is the total_elements_condensed (number density) value divided by the total number density
-                """
 
                 in_solid, in_temp, out_solid, out_temp = self.equilibrate_solids(error_threshold=error_threshold)
 
+                # out_temp and in_temp are 0 if an actual out_temp or in_temp are calculated.
                 if in_temp > out_temp:  # if the appearance temperature is greater than the disappearance temperature
                     print("IN SOLID: {} ({} K)".format(in_solid, in_temp))
                     if in_solid not in self.tracked_solids.keys():
@@ -280,28 +279,19 @@ class Condensation:
 
                     self.removed_solids.append(out_solid)  # track the exit of the solid
 
-            if self.any_out or self.any_in:  # if there are any solids introduced or dropped by the above loop
+            if self.any_out or self.any_in:  # if there are any solids introduced or dropped by the above loop, then recalculate the number densities and abundances
                 self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
                 self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
                                  temperature=self.temperature, gas_methods=self.gas_methods)
                 self.mass_balance = self.calculate_mass_balance()
                 self.solve()
 
-            # calculate solid number densities
-            self.calcuate_solid_number_density()
+                # calculate solid number densities
+                self.calcuate_solid_number_density()
 
-            print("Finished equilibrating potential solids!")
-            # get the total number density of the condensed elements
-            for s in self.condensing_solids:
-                solid_stoich = self.solid_molecules_library[s]
-                for element in solid_stoich:
-                    stoich = solid_stoich[element]
-                    element_number_density = self.number_densities[element]
-                    self.total_elements_condensed[element] += stoich * element_number_density
+                print("Finished equilibrating potential solids!")
 
-            for element in self.total_elements_condensed:
-                element_number_density = self.total_elements_condensed[element]
-                self.percent_element_condensed[element] = element_number_density / self.mass_balance[element]
+                self.calculate_percentage_condensed()  # calculate the percentage of each element condensed
 
             self.previous_number_densities = copy.copy(self.number_densities)
             self.previous_number_densities_solids = copy.copy(self.number_densities_solids)
@@ -318,7 +308,7 @@ a = {'Ni': 1.66e+16, 'C': 2.692e+18, 'F': 363100000000000.0, 'H': 1e+22, 'K': 10
      'Ca': 2.188e+16, 'Si': 3.236e+17, 'Al': 2.818e+16, 'Ar': 2.512e+16, 'Fe': 3.162e+17, 'Na': 1.738e+16,
      'Cr': 4365000000000000.0, 'He': 8.511e+20}
 c = Condensation(
-    start_temperature=1506,
+    start_temperature=2500,
     end_temperature=200,
     abundances=a,
     total_pressure=1 * 10 ** -3
