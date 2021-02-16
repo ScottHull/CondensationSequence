@@ -81,8 +81,6 @@ def get_atoms_from_molecule(path, skiprows=0, solid=False, liquid=False):
         molecules_dict.update({molecule_name: {}})
         atom_nums = re.findall(r'([A-Z][a-z]*)(\d*)', m)
         for i in atom_nums:
-            if liquid:
-                print(m, i)
             name = i[0]
             molecules_dict[molecule_name].update({name: int(i[1])})
     return molecules_dict

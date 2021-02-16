@@ -64,27 +64,27 @@ def number_density_element_gas(element_appearances_in_molecules, molecule_librar
     return element_number_densities
 
 
-def get_all_condensing_solid_elements_and_molecules(condensing_solids):
+def get_all_condensing_elements_and_molecules(condensing_molecules):
     """
     Returns a dictionary of all condensing elements and a list of condensing solids in which the element appears.
     :param condensing_solids:
     :return:
     """
-    solid_elements_and_molecules = {}
-    for molecule in condensing_solids:
+    elements_and_molecules = {}
+    for molecule in condensing_molecules:
         stoich = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
         for element in stoich:
             element = element[0]  # get the element name from the element-stoich tuple returned by the re function
-            if element not in solid_elements_and_molecules.keys():
-                solid_elements_and_molecules.update({element: []})
-            solid_elements_and_molecules[element].append(molecule)
-    return solid_elements_and_molecules
+            if element not in elements_and_molecules.keys():
+                elements_and_molecules.update({element: []})
+            elements_and_molecules[element].append(molecule)
+    return elements_and_molecules
 
 
 def number_density_element_solid(number_densities, condensing_solids, solid_molecule_library, ordered_names):
     fugacities = ['H', 'Cl', 'F', 'O', 'N']
     solid_number_density = {}
-    solids = get_all_condensing_solid_elements_and_molecules(condensing_solids=condensing_solids)
+    solids = get_all_condensing_elements_and_molecules(condensing_molecules=condensing_solids)
     for element in solids.keys():
         mass_balance = 0
         molecules = solids[element]
@@ -99,6 +99,26 @@ def number_density_element_solid(number_densities, condensing_solids, solid_mole
                 mass_balance = 1e999
         solid_number_density.update({element: mass_balance})
     return solid_number_density
+
+
+def number_density_element_liquid(number_densities, condensing_liquids, liquid_molecule_library, ordered_names):
+    fugacities = ['H', 'Cl', 'F', 'O', 'N']
+    liquid_number_density = {}
+    liquids = get_all_condensing_elements_and_molecules(condensing_molecules=condensing_liquids)
+    for element in liquids.keys():
+        mass_balance = 0
+        molecules = liquids[element]
+        for liquid_molecule in molecules:
+            stoich = liquid_molecule_library[liquid_molecule]
+            if number_densities[liquid_molecule] > 0:  # negative guesses break the solver
+                coeff = stoich[element]
+                if element in fugacities:
+                    coeff /= 2.0
+                mass_balance += coeff * number_densities[liquid_molecule]
+            else:  # force the solver out to re-sample
+                mass_balance = 1e999
+        liquid_number_density.update({element: mass_balance})
+    return liquid_number_density
 
 
 def solid_partial_pressure(molecule, guess_number_densities, solid_molecules_library, temperature, R=8.3144621e-2):
@@ -116,3 +136,18 @@ def solid_partial_pressure(molecule, guess_number_densities, solid_molecules_lib
             molecule_partial_pressure *= (guess_number_densities[element] * R * temperature) ** coeff
     return molecule_partial_pressure
 
+
+def liquid_partial_pressure(molecule, guess_number_densities, liquid_molecules_library, temperature, R=8.3144621e-2):
+    fugacities = ['H', 'Cl', 'F', 'O', 'N']
+    molecule_partial_pressure = 1
+    stoich = liquid_molecules_library[molecule]
+    for element in stoich.keys():
+        if guess_number_densities[element] < 0:  # kick solver if it is guessing negative values
+            molecule_partial_pressure = 1e999
+            break
+        else:
+            coeff = stoich[element]
+            if element in fugacities:
+                coeff /= 2.0
+            molecule_partial_pressure *= (guess_number_densities[element] * R * temperature) ** coeff
+    return molecule_partial_pressure

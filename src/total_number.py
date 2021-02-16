@@ -26,8 +26,10 @@ def molecule_number_density(number_densities, molecule_stoich, K, temperature, R
 
 
 def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appearances_in_molecules,
+                      liquid_element_appearances_in_molecules,
                       element_number_densities,
-                      condensing_solids, gas_molecule_library, solid_molecule_library, K_dict, temperature,
+                      condensing_solids, condensing_liquids, gas_molecule_library, solid_molecule_library,
+                      liquid_molecule_library, K_dict, temperature,
                       R=8.314e-2):
     """
     Returns the total number density of all elements in the system based on their active gas and solid molecules.
@@ -42,6 +44,7 @@ def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appear
     """
 
     number_density_gas = {}
+    number_density_liquid = {}
     number_density_solid = {}
 
     # gasses
@@ -76,6 +79,21 @@ def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appear
                         stoich = molecule_stoich[component_atom]
                         num = stoich * element_number_densities[molecule]  # calculate number density
                         number_density_solid[atom] += num  # sum the number density
+
+    # liquids
+    if len(condensing_liquids) > 0:
+        for atom in liquid_element_appearances_in_molecules.keys():  # loop through all of the input elements for liquids
+            number_density_liquid.update({atom: 0})
+            molecules = liquid_element_appearances_in_molecules[
+                atom]  # retrieve the molecules in which the element exists
+            for molecule in molecules:  # loop through all molecules in which the element appears
+                if molecule in condensing_liquids:
+                    K = K_dict[molecule]  # get the equilibrium constant
+                    molecule_stoich = liquid_molecule_library[molecule]  # retrieve the molecule stoichiometry
+                    for component_atom in molecule_stoich.keys():
+                        stoich = molecule_stoich[component_atom]
+                        num = stoich * element_number_densities[molecule]  # calculate number density
+                        number_density_liquid[atom] += num  # sum the number density
 
     total_pressure = sum(number_density_gas.values()) + sum(number_density_solid.values())
     return total_pressure

@@ -315,20 +315,28 @@ def liquid_J(temperature, molecule, R=8.3144621):
         K = exp(-delta_G_gas / (R * temperature))
         return K
     else:
-        return 0
+        return 1
 
 
-def get_K_liquid(molecules, temperature):
+def get_K_liquid(temperature):
     """
-    The initial function for calculating the K equilibrium constants for liquids.
+    Initial function for calculating the K equilibrium constant values of liquid molecules.
     """
-    K_liquid = {}
-    for m in molecules:
-        method = "J"  # assuming JANAF interpolation is only valid, can implement other methods later
-        if method == "J":
-            K = liquid_J(temperature=temperature, molecule=m)
-            K_liquid.update({m: K})
-    return K_liquid
+    K_dict = {}
+    molecules = pd.read_csv("Data/Liquids.dat", delimiter="\t", header=None, skiprows=0, index_col=False)
+
+    for row in molecules.itertuples(index=False):
+        molecule = row[0]
+        method = row[1]
+
+        if method == 'J':
+            K = liquid_J(molecule=molecule, temperature=temperature)
+        else:
+            K = 1
+
+        K_dict.update({molecule + "_l": K})
+
+    return K_dict
 
 
 def get_K(gas_molecules, gas_methods, solid_molecules, liquid_molecules, temperature, solid, liquid, gas):
@@ -340,7 +348,7 @@ def get_K(gas_molecules, gas_methods, solid_molecules, liquid_molecules, tempera
         K_gas = get_K_gas(molecules=gas_molecules.keys(), methods=gas_methods, temperature=temperature)
         K_dict.update(K_gas)
     if liquid:
-        K_liquid = get_K_liquid(molecules=liquid_molecules.keys(), temperature=temperature)
+        K_liquid = get_K_liquid(temperature=temperature)
         K_dict.update(K_liquid)
     if solid:
         K_solids = get_K_solids(temperature=temperature)

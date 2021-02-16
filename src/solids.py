@@ -5,7 +5,7 @@ import sys
 
 
 def check_in(solids, number_densities, temperature, K_dict, condensing_solids, temperature_old, K_dict_old,
-             number_densities_old, removed_solids_old, removed_solids, R=8.3144621e-2):
+             number_densities_old, removed_solids_old, removed_solids, is_solid, R=8.3144621e-2):
     """
 
     :param solids: A dictionary of solid molecules and their stoichiometry
@@ -20,6 +20,8 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
     :param removed_solids:
     :return:
     """
+    if not is_solid:
+        return False, False
 
     fugacities = ['H', 'Cl', 'F', 'O', 'N']  # diatomic molecules
 
@@ -42,7 +44,7 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
         # K * prod(P_i) = P_mol.  If P_mol >= 1, then the solid is stable (i.e. log10(1 / KP) < 0)
         # - log10(K) - log10(prod(P_i)) = log(1 / K prod(P_i)) -> raise to power of 10 -> 1 / K prod(P_I)
         condensation_criterion = 1.0 / (
-                    K_dict[solid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
+                K_dict[solid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
         if condensation_criterion < 1 and temperature != temperature_old:
             # if the partial pressure exceeds the equilibrium constant
             if solid_molecule not in condensing_solids:  # if the condensation criterion has previously been met
