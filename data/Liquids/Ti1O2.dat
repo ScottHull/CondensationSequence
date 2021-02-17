@@ -1,5 +1,5 @@
-Titanium Oxide (TiO2)	O2Ti1(l)
-T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
+#Titanium Oxide (TiO2)	O2Ti1(l)
+#T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
 1500	100.416	186.351	127.014	89.006	-885.798	-656.268	22.853
 1600	100.416	192.832	130.927	99.047	-882.679	-641.068	20.929
 1700	100.416	198.919	134.749	109.089	-879.701	-626.059	19.236

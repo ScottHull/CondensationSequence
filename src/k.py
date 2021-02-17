@@ -12,10 +12,11 @@ def read_janaf_file(path):
     S_ref = []
     delta_G_ref = []
     K_ref = []
-    df = open(path, "rU")
+    df = open(path, "r")
     for aRow in df:
         if not aRow.startswith("#"):
             values = aRow.split('\t')
+            values = [np.inf if x == 'INFINITE\n' else x for x in values]
             temperature_ref.append(float(values[0]))
             delta_H_ref.append(float(values[4]))
             H_ref.append(float(values[5]))
@@ -33,13 +34,9 @@ def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
     reference_correction = 0.
 
     for atom in atoms_in_molecule:
-        atom_df = pd.read_csv("Data/Reference/" + atom[0] + "_ref.dat", header=None, skiprows=2, delimiter="\t",
-                              index_col=False).astype(str).replace("INFINITE", np.inf)
-        atom_df = atom_df[~atom_df[0].str.contains('#')].astype(float)
-        temperature_ref = list(atom_df[0])
-        delta_H_ref = list(atom_df[4])
-        S_ref = list(atom_df[2])
-        H_ref = list(atom_df[5])
+        temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file(
+            "Data/Reference/" + atom[0] + "_ref.dat")
+
         H0 = collect_data.lookup_and_interpolate(temperature_ref, H_ref, 298.15) * 1000.
         change_H = collect_data.lookup_and_interpolate(temperature_ref, delta_H_ref, temperature) * 1000.
         change_S = collect_data.lookup_and_interpolate(temperature_ref, S_ref, temperature)
@@ -89,7 +86,7 @@ def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 
     temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("Data/Janaf/" + molecule + ".dat")
 
-    if temperature > float(temperature_ref.iloc[-1]):
+    if temperature > float(temperature_ref[-1]):
         C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
         C1 = 2 * k1 * (((temperature ** 0.5) - (298.15 ** 0.5)) + (
                 temperature * (((temperature ** -0.5)) - ((298.15 ** -0.5)))))
@@ -166,16 +163,10 @@ def gas_J(temperature, molecule, R=8.3144621):
     :param R:
     :return:
     """
-    path_molecule = pd.read_csv("Data/Gasses/" + molecule + ".dat", delimiter="\t", skiprows=2, header=None,
-                                index_col=False)
-    reference_temperature = path_molecule[0]
-    delta_H = path_molecule[4]
-    H_ref = path_molecule[5]
-    S_ref = path_molecule[2]
-    delta_G_ref = path_molecule[6]
-    delta_G_gas = collect_data.lookup_and_interpolate(reference_temperature, delta_G_ref,
+    temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("Data/Gasses/" + molecule + ".dat")
+    delta_G_gas = collect_data.lookup_and_interpolate(temperature_ref, delta_G_ref,
                                                       temperature) * 1000  # interpolate deltaG
-    if temperature < reference_temperature.iloc[-1]:
+    if temperature < temperature_ref[-1]:
         # delta G = -RT ln(k)
         # ln(k) = -deltaG / RT
         # K = exp(-deltaG / RT)

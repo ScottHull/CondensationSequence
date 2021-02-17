@@ -1,5 +1,5 @@
-Iron Oxide (FeO)	Fe1O1(l)
-T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
+#Iron Oxide (FeO)	Fe1O1(l)
+#T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
 1200	68.199	150.271	108.656	49.938	-249.537	-188.086	8.187
 1300	68.199	155.730	112.070	56.758	-247.952	-183.030	7.354
 1400	68.199	160.784	115.371	63.578	-246.466	-178.092	6.645

@@ -1,5 +1,5 @@
-Aluminum Oxide (Al2O3)	Al2O3(l)
-T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
+#Aluminum Oxide (Al2O3)	Al2O3(l)
+#T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
 1400	192.464	241.859	147.354	132.308	-1630.708	-1197.213	44.669
 1500	192.464	255.138	154.102	151.554	-1623.274	-1166.509	40.621
 1600	192.464	267.559	160.809	170.800	-1615.878	-1136.299	37.096

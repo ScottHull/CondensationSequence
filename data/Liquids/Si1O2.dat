@@ -1,5 +1,5 @@
-Silicon Oxide (SiO2)	O2Si1(l)
-T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
+#Silicon Oxide (SiO2)	O2Si1(l)
+#T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
 1800	85.772	163.759	105.881	104.181	-939.468	-589.559	17.109
 1900	85.772	168.397	109.050	112.759	-937.350	-570.178	15.675
 2000	85.772	172.796	112.128	121.336	-935.255	-550.907	14.388

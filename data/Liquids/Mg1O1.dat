@@ -1,5 +1,5 @@
-Magnesium Oxide (MgO)	Mg1O1(l)
-T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
+#Magnesium Oxide (MgO)	Mg1O1(l)
+#T(K)	Cp	S	-[G-H(Tr)]/T	H-H(Tr)	delta-f H	delta-f G	log Kf
 2200	66.944	146.530	101.579	98.891	-653.736	-258.077	6.128
 2300	66.944	149.505	103.599	105.585	-651.037	-240.153	5.454
 2400	66.944	152.354	105.571	112.280	-648.350	-222.346	4.839
