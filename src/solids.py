@@ -1,6 +1,6 @@
 from math import log10
 from scipy.optimize import brentq
-import collect_data
+from src import collect_data
 import sys
 
 

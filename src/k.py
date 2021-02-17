@@ -2,8 +2,27 @@ from math import exp, log, log10
 import re
 import numpy as np
 import pandas as pd
-import collect_data
+from src import collect_data
 import sys
+
+def read_janaf_file(path):
+    temperature_ref = []
+    delta_H_ref = []
+    H_ref = []
+    S_ref = []
+    delta_G_ref = []
+    K_ref = []
+    df = open(path, "rU")
+    for aRow in df:
+        if not aRow.startswith("#"):
+            values = aRow.split('\t')
+            temperature_ref.append(float(values[0]))
+            delta_H_ref.append(float(values[4]))
+            H_ref.append(float(values[5]))
+            S_ref.append(float(values[2]))
+            delta_G_ref.append(float(values[6]))
+            K_ref.append(float(values[7]))
+    return temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref
 
 
 def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
@@ -67,16 +86,8 @@ def solid_K_B3(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 
 
 def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
-    molecule_df = pd.read_csv("Data/Janaf/" + molecule + ".dat", header=None, skiprows=2, delimiter="\t",
-                              index_col=False, dtype="str")
-    molecule_df = molecule_df[~molecule_df[0].str.contains("#")].astype(float)
 
-    temperature_ref = molecule_df[0]
-    delta_H_ref = molecule_df[4]
-    H_ref = molecule_df[5]
-    S_ref = molecule_df[2]
-    delta_G_ref = molecule_df[6]
-    K_ref = molecule_df[7]
+    temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("Data/Janaf/" + molecule + ".dat")
 
     if temperature > float(temperature_ref.iloc[-1]):
         C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))

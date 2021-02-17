@@ -4,12 +4,12 @@ from math import sqrt
 import numpy as np
 from scipy.optimize import root
 
-import collect_data
-import k
-import liquids
-import mass_balance
-import solids
-import total_number
+from src import collect_data
+from src import k
+from src import liquids
+from src import mass_balance
+from src import solids
+from src import total_number
 
 
 class Condensation:
@@ -21,6 +21,7 @@ class Condensation:
         self.IS_SOLID = solid  # if we are to equilibrate solids
 
         self.R = 8.3144621e-2
+        self.K = {}
         self.start_temperature = start_temperature
         self.temperature = start_temperature
         self.end_temperature = end_temperature
@@ -117,9 +118,13 @@ class Condensation:
         He = self.abundances['He']
         Ne = self.abundances['Ne']
         Ar = self.abundances['Ar']
-        K = k.get_K_gas(molecules=self.gas_molecules_library.keys(), methods=self.gas_methods,
+        X = 0
+        if self.initial:
+            K = k.get_K_gas(molecules=self.gas_molecules_library.keys(), methods=self.gas_methods,
                         temperature=self.temperature)
-        X = K["H1"] ** 2
+            X = K["H1"] ** 2
+        else:
+            X = self.K["H1"] ** 2
         H2_coef_a = 4. + X
         H2_coef_b = -((4. * H) + (X * H))
         H2_coef_c = H ** 2
@@ -277,10 +282,11 @@ class Condensation:
 
         for element in self.total_elements_condensed:
             element_number_density = self.total_elements_condensed[element]
-            self.percent_element_condensed[element].append(element_number_density / self.mass_balance[element] * 100.0)
-
-        print("Percent element condensed:")
-        print(self.percent_element_condensed)
+            percent_condensed = element_number_density / self.mass_balance[element] * 100.0
+            self.percent_element_condensed[element].append({
+                "temperature": self.temperature,
+                "percent": percent_condensed
+            })
 
     def sequence(self):
         """
