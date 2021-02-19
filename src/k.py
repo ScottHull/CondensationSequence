@@ -30,6 +30,7 @@ def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
     """
     Calculate the K equilibrium constant values of solid molecules based on the fitted input parameters.
     """
+    K = 1
     atoms_in_molecule = re.findall(r'([A-Z][a-z]*)(\d*)', molecule)
     reference_correction = 0.
 
@@ -54,7 +55,13 @@ def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
     # K = exp(-deltaG / RT)
     # Note: 10**((-deltaG / RT) * log10(exp(1))) = exp(-deltaG / RT)
     # Therefore, ln(K) = (-deltaG / RT) * log10(exp(1))
-    K = exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
+    K = np.exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
+
+    # try:
+        # K = exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
+        # K = np.exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
+    # except OverflowError:
+    #     K = float('inf')
 
     return K
 
@@ -84,6 +91,8 @@ def solid_K_B3(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 
 def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 
+    K = 1
+
     temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("Data/Janaf/" + molecule + ".dat")
 
     if temperature > float(temperature_ref[-1]):
@@ -98,7 +107,10 @@ def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
         return K
     else:
         # data in table is given as log10(K)
-        K = 10 ** collect_data.lookup_and_interpolate(temperature_ref, K_ref, temperature)
+        try:
+            K = 10 ** collect_data.lookup_and_interpolate(temperature_ref, K_ref, temperature)
+        except OverflowError:
+            K = float('inf')
         return K
 
 
@@ -148,7 +160,7 @@ def get_K_solids(temperature):
                           delta_H=delta_H)
 
         else:
-            K = 1
+            K = 1.0
 
         K_dict.update({molecule + "_s": K})
 

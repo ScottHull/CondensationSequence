@@ -70,6 +70,7 @@ class Condensation:
         self.any_in = True
         self.any_out = True
         self.errors = []
+        self.error_threshold = 0
 
         self.tracked_solids = {}  # tracks in and out temperatures of the solid
         self.tracked_liquids = {}  # tracks in and out temperatures of the liquid
@@ -105,7 +106,11 @@ class Condensation:
         self.number_densities = dict(zip(names,
                                          number_densities.x))  # make a dictionary where the element is the key and the activity is the value
         self.errors = mass_balance.mass_balance(number_densities.x, *args)
+        self.error_threshold = sqrt(
+            sum([i ** 2 for index, i in enumerate(self.errors) if names[index] not in self.condensing_solids]))
         print("Solved system!")
+        if "Fe1_s" in names:
+            print(self.number_densities)
 
     def normalize_abundances(self, abundances):
         # norm = {}
@@ -121,7 +126,7 @@ class Condensation:
         X = 0
         if self.initial:
             K = k.get_K_gas(molecules=self.gas_molecules_library.keys(), methods=self.gas_methods,
-                        temperature=self.temperature)
+                            temperature=self.temperature)
             X = K["H1"] ** 2
         else:
             X = self.K["H1"] ** 2
@@ -149,7 +154,7 @@ class Condensation:
             mass_balance_from_pp.update({element: N_i})
         return mass_balance_from_pp
 
-    def equilibrate_solids(self, error_threshold):
+    def equilibrate_solids(self):
         """
         solids.check_in: returns the incoming solid and the interpolated temperature at which it appears.  If no new
             solid appears, it will return False and self.any_in will be set to True, thereby breaking the while loop
@@ -177,7 +182,7 @@ class Condensation:
             is_solid=self.IS_SOLID
         )
 
-        if error_threshold > 1 * 10 ** -13:  # if the error is smaller than the threshold
+        if self.error_threshold > 1 * 10 ** -13:  # if the error is smaller than the threshold
             in_solid = False
             in_solid_temp = 0
         if not in_solid:  # if there is no new solid entering, break the loop
@@ -196,7 +201,7 @@ class Condensation:
 
         return in_solid, in_solid_temp, out_solid, out_solid_temp
 
-    def equilibrate_liquids(self, error_threshold):
+    def equilibrate_liquids(self):
         """
         liquids.check_in: returns the incoming liquid and the interpolated temperature at which it appears.  If no new
             liquid appears, it will return False and self.any_in will be set to True, thereby breaking the while loop
@@ -209,7 +214,7 @@ class Condensation:
 
         # in_liquid is the liquid that condenses
         # in_solid_temperature is the temperature at which the liquid condenses
-        in_liquid, in_solid_temp = liquids.check_in(
+        in_liquid, in_liquid_temp = liquids.check_in(
             liquids=self.liquid_molecules_library,
             number_densities=self.number_densities,
             temperature=self.temperature,
@@ -223,24 +228,24 @@ class Condensation:
             is_liquid=self.IS_LIQUID
         )
 
-        if error_threshold > 1 * 10 ** -13:  # if the error is smaller than the threshold
+        if self.error_threshold > 1 * 10 ** -13:  # if the error is smaller than the threshold
             in_liquid = False
-            in_solid_temp = 0
+            in_liquid_temp = 0
         if not in_liquid:  # if there is no new liquid entering, break the loop
             self.any_in = False  # break out of check-in loop
-            in_solid_temp = 0
+            in_liquid_temp = 0
 
-        out_liquid, out_solid_temp = liquids.check_out(condensing_liquids=self.condensing_liquids,
-                                                       number_density_liquids=self.number_densities_liquids,
-                                                       number_density_liquids_old=self.previous_number_densities_liquids,
-                                                       temperature=self.temperature,
-                                                       temperature_old=self.previous_temperature)
+        out_liquid, out_liquid_temp = liquids.check_out(condensing_liquids=self.condensing_liquids,
+                                                        number_density_liquids=self.number_densities_liquids,
+                                                        number_density_liquids_old=self.previous_number_densities_liquids,
+                                                        temperature=self.temperature,
+                                                        temperature_old=self.previous_temperature)
 
         if not out_liquid:
             self.any_out = False
-            out_solid_temp = 0
+            out_liquid_temp = 0
 
-        return in_liquid, in_solid_temp, out_liquid, out_solid_temp
+        return in_liquid, in_liquid_temp, out_liquid, out_liquid_temp
 
     def calculate_total_number(self):
         # the sum of all number densities across gasses and solids
@@ -331,15 +336,13 @@ class Condensation:
             self.calculate_total_number()
 
             # make sure that the guess number densities return 0's, or very very close to 0's.
-            error_threshold = sqrt(sum([i ** 2 for i in self.errors]))
+            self.error_threshold = sqrt(sum([i ** 2 for i in self.errors]))
 
             # check in stable solid molecules into the system
             while self.any_in and self.any_out:  # enter a while loop
 
-                in_solid, in_solid_temp, out_solid, out_solid_temp = self.equilibrate_solids(
-                    error_threshold=error_threshold)
-                in_liquid, in_liquid_temp, out_liquid, out_liquid_temp = self.equilibrate_liquids(
-                    error_threshold=error_threshold)
+                in_solid, in_solid_temp, out_solid, out_solid_temp = self.equilibrate_solids()
+                in_liquid, in_liquid_temp, out_liquid, out_liquid_temp = self.equilibrate_liquids()
 
                 # out_solid_temp and in_solid_temp are 0 if an actual out_solid_temp or in_solid_temp are calculated.
                 if in_solid_temp > out_solid_temp:  # if the appearance temperature is greater than the disappearance temperature
@@ -423,6 +426,7 @@ class Condensation:
             self.previous_removed_liquids = copy.copy(self.removed_liquids)
             self.previous_temperature = self.temperature
             self.temperature -= self.dT
+            print("error: {}".format(self.error_threshold))
             if self.IS_SOLID:
                 print("Stable solids: {}".format(self.condensing_solids))
             if self.IS_LIQUID:

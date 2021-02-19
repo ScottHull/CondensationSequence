@@ -45,12 +45,12 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
         # - log10(K) - log10(prod(P_i)) = log(1 / K prod(P_i)) -> raise to power of 10 -> 1 / K prod(P_I)
         condensation_criterion = 1.0 / (
                 K_dict[solid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
-        if condensation_criterion < 1 and temperature != temperature_old:
+        if condensation_criterion <= 1 and temperature != temperature_old:
             # if the partial pressure exceeds the equilibrium constant
             if solid_molecule not in condensing_solids:  # if the condensation criterion has previously been met
                 condensation_criterion_old = 1.0 / (
                         K_dict_old[solid_molecule] * pressure_product_old)  # i.e. "the chemical activity exceeds 1"
-                if condensation_criterion_old < 1:
+                if condensation_criterion_old <= 1:
                     new_solids.append([solid_molecule, temperature_old])
                 else:  # if the condensation criterion has just been met
                     # interpolate the exact condensation temperature
