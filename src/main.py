@@ -278,26 +278,35 @@ class Condensation:
             solid_stoich = self.solid_molecules_library[s]
             for element in solid_stoich:
                 stoich = solid_stoich[element]
-                element_number_density = self.number_densities[element]
-                self.total_elements_condensed[element] += stoich * element_number_density
-        for s in self.condensing_liquids:
-            liquid_stoich = self.liquid_molecules_library[s]
-            for element in liquid_stoich:
-                stoich = liquid_stoich[element]
-                element_number_density = self.number_densities[element]
-                self.total_elements_condensed[element] += stoich * element_number_density
+                element_number_density = self.number_densities[s]
+                self.total_elements_condensed[element] += (stoich * element_number_density)
 
-        for element in self.total_elements_condensed:
+        # for s in self.condensing_liquids:
+        #     liquid_stoich = self.liquid_molecules_library[s]
+        #     for element in liquid_stoich:
+        #         stoich = liquid_stoich[element]
+        #         element_number_density = self.number_densities[element]
+        #         self.total_elements_condensed[element] += stoich * element_number_density
+
+        for element in self.total_elements_condensed.keys():
             element_number_density = self.total_elements_condensed[element]
-            percent_condensed = element_number_density / self.total_number * 100.0
+            percent_condensed = (element_number_density / self.mass_balance[element]) * 100.0
             self.percent_element_condensed[element].append({
                 "temperature": self.temperature,
                 "percent": percent_condensed
             })
+        print(self.percent_element_condensed["Ca"][-1]['percent'])
+        print("Percent refractories condensed:\nFe:\t{}\nMg:\t{}\nSi:\t{}\nAl:\t{}\nCa:\t{}\nTOTAL N:\t{}".format(
+            round(self.percent_element_condensed["Fe"][-1]['percent'], 2),
+            round(self.percent_element_condensed["Mg"][-1]['percent'], 2),
+            round(self.percent_element_condensed["Si"][-1]['percent'], 2),
+            round(self.percent_element_condensed["Al"][-1]['percent'], 2),
+            round(self.percent_element_condensed["Ca"][-1]['percent'], 2),
+            self.total_number
+        ))
 
         if self.percent_element_condensed["Si"][-1]["percent"] > 99.99 and self.percent_element_condensed["Mg"][-1]["percent"] > 99.99 and self.percent_element_condensed["Fe"][-1]["percent"] > 99.99:
             print("[*] Refractory elements exhausted!")
-            print(self.percent_element_condensed["Fe"])
             sys.exit()
 
     def sequence(self):
@@ -439,7 +448,9 @@ class Condensation:
                 print("[!] Substantial solution error. Aborting... ({})".format(self.error_threshold))
                 print("Errors: {}".format(self.errors))
                 print("Percent condensed: {}".format(self.percent_element_condensed))
-                sys.exit()
+                self.any_in = True
+                self.any_out = True
+                # sys.exit()
             if self.IS_SOLID:
                 if len(self.condensing_solids) > 0:
                     print("Stable solids: {}".format(self.condensing_solids))

@@ -95,5 +95,6 @@ def calculate_total_N(gas_element_appearances_in_molecules, solid_element_appear
                         num = stoich * element_number_densities[molecule]  # calculate number density
                         number_density_liquid[atom] += num  # sum the number density
 
-    total_pressure = sum(number_density_gas.values()) + sum(number_density_solid.values())
+    total_pressure = sum(number_density_gas.values()) + sum(number_density_solid.values()) + sum(
+        number_density_liquid.values())
     return total_pressure
