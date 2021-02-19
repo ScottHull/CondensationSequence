@@ -426,7 +426,6 @@ class Condensation:
             self.previous_removed_liquids = copy.copy(self.removed_liquids)
             self.previous_temperature = self.temperature
             self.temperature -= self.dT
-            print("error: {}".format(self.error_threshold))
             if self.IS_SOLID:
                 print("Stable solids: {}".format(self.condensing_solids))
             if self.IS_LIQUID:
