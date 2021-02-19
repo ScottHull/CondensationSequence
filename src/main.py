@@ -1,5 +1,6 @@
 import copy
 from math import sqrt
+import sys
 
 import numpy as np
 from scipy.optimize import root
@@ -66,6 +67,7 @@ class Condensation:
         for element in self.abundances.keys():  # initial setup
             self.percent_element_condensed.update({element: []})
             self.total_elements_condensed.update({element: 0})
+        self.total_number = 0
 
         self.any_in = True
         self.any_out = True
@@ -109,8 +111,6 @@ class Condensation:
         self.error_threshold = sqrt(
             sum([i ** 2 for index, i in enumerate(self.errors) if names[index] not in self.condensing_solids]))
         print("Solved system!")
-        if "Fe1_s" in names:
-            print(self.number_densities)
 
     def normalize_abundances(self, abundances):
         # norm = {}
@@ -182,7 +182,7 @@ class Condensation:
             is_solid=self.IS_SOLID
         )
 
-        if self.error_threshold > 1 * 10 ** -13:  # if the error is smaller than the threshold
+        if self.error_threshold > 0.05:  # if the error is smaller than the threshold
             in_solid = False
             in_solid_temp = 0
         if not in_solid:  # if there is no new solid entering, break the loop
@@ -249,7 +249,7 @@ class Condensation:
 
     def calculate_total_number(self):
         # the sum of all number densities across gasses and solids
-        total_N = total_number.calculate_total_N(
+        self.total_number = total_number.calculate_total_N(
             gas_element_appearances_in_molecules=self.element_gas_appearances,  # all active gas molecules in system
             solid_element_appearances_in_molecules=self.element_solid_appearances,
             liquid_element_appearances_in_molecules=self.element_liquid_appearances,
@@ -265,10 +265,10 @@ class Condensation:
         )
 
         for i in self.condensing_solids:
-            self.number_densities_solids.update({i: self.number_densities[i] / total_N})
+            self.number_densities_solids.update({i: self.number_densities[i] / self.total_number})
 
         for i in self.condensing_liquids:
-            self.number_densities_liquids.update({i: self.number_densities[i] / total_N})
+            self.number_densities_liquids.update({i: self.number_densities[i] / self.total_number})
 
     def calculate_percentage_condensed(self):
         # get the total number density of the condensed elements
@@ -287,11 +287,16 @@ class Condensation:
 
         for element in self.total_elements_condensed:
             element_number_density = self.total_elements_condensed[element]
-            percent_condensed = element_number_density / self.mass_balance[element] * 100.0
+            percent_condensed = element_number_density / self.total_number * 100.0
             self.percent_element_condensed[element].append({
                 "temperature": self.temperature,
                 "percent": percent_condensed
             })
+
+        if self.percent_element_condensed["Si"][-1]["percent"] > 99.99 and self.percent_element_condensed["Mg"][-1]["percent"] > 99.99 and self.percent_element_condensed["Fe"][-1]["percent"] > 99.99:
+            print("[*] Refractory elements exhausted!")
+            print(self.percent_element_condensed["Fe"])
+            sys.exit()
 
     def sequence(self):
         """
@@ -320,15 +325,12 @@ class Condensation:
 
         while self.temperature > self.end_temperature:
             print("AT TEMPERATURE: {}".format(self.temperature))
-            self.any_in = True
-            self.any_out = True
+
             self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
-            print("Getting K...")
             self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
                              temperature=self.temperature, gas_methods=self.gas_methods,
                              liquid_molecules=self.liquid_molecules_library, gas=self.IS_GAS, liquid=self.IS_LIQUID,
                              solid=self.IS_SOLID)
-            print("Got K!")
 
             self.solve()  # run the root solver
 
@@ -426,7 +428,16 @@ class Condensation:
             self.previous_removed_liquids = copy.copy(self.removed_liquids)
             self.previous_temperature = self.temperature
             self.temperature -= self.dT
+            if self.error_threshold > 1 * 10**-13:
+                print("[!] Substantial solution error: {}".format(self.error_threshold))
+            if self.error_threshold < 0.05:
+                self.any_in = True
+                self.any_out = True
+            else:
+                print("[!] Substantial solution error. Aborting... ({})".format(self.error_threshold))
             if self.IS_SOLID:
-                print("Stable solids: {}".format(self.condensing_solids))
+                if len(self.condensing_solids) > 0:
+                    print("Stable solids: {}".format(self.condensing_solids))
             if self.IS_LIQUID:
-                print("Stable liquids: {}".format(self.condensing_liquids))
+                if len(self.condensing_liquids) > 0:
+                    print("Stable liquids: {}".format(self.condensing_liquids))
