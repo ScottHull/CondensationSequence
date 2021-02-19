@@ -110,6 +110,8 @@ class Condensation:
         self.errors = mass_balance.mass_balance(number_densities.x, *args)
         self.error_threshold = sqrt(
             sum([i ** 2 for index, i in enumerate(self.errors) if names[index] not in self.condensing_solids]))
+        self.errors = dict(zip([n for n in names if n not in self.condensing_solids and n
+                                not in self.condensing_liquids], self.errors))
         print("Solved system!")
 
     def normalize_abundances(self, abundances):
@@ -337,9 +339,6 @@ class Condensation:
             # calculate solid number densities
             self.calculate_total_number()
 
-            # make sure that the guess number densities return 0's, or very very close to 0's.
-            self.error_threshold = sqrt(sum([i ** 2 for i in self.errors]))
-
             # check in stable solid molecules into the system
             while self.any_in and self.any_out:  # enter a while loop
 
@@ -410,15 +409,18 @@ class Condensation:
                                  temperature=self.temperature, gas_methods=self.gas_methods,
                                  liquid_molecules=self.liquid_molecules_library, gas=self.IS_GAS, liquid=self.IS_LIQUID,
                                  solid=self.IS_SOLID)
+
+                # resolve the system for new solids
                 self.mass_balance = self.calculate_mass_balance()
                 self.solve()
 
                 # calculate solid number densities
                 self.calculate_total_number()
 
-                print("Finished equilibrating potential solids!")
+                # calculate the percentage of each element condensed
+                self.calculate_percentage_condensed()
 
-                self.calculate_percentage_condensed()  # calculate the percentage of each element condensed
+                print("Finished equilibrating potential solids!")
 
             self.previous_number_densities = copy.copy(self.number_densities)
             self.previous_number_densities_solids = copy.copy(self.number_densities_solids)
@@ -435,6 +437,9 @@ class Condensation:
                 self.any_out = True
             else:
                 print("[!] Substantial solution error. Aborting... ({})".format(self.error_threshold))
+                print("Errors: {}".format(self.errors))
+                print("Percent condensed: {}".format(self.percent_element_condensed))
+                sys.exit()
             if self.IS_SOLID:
                 if len(self.condensing_solids) > 0:
                     print("Stable solids: {}".format(self.condensing_solids))
