@@ -279,7 +279,9 @@ class Condensation:
             for element in solid_stoich:
                 stoich = solid_stoich[element]
                 element_number_density = self.number_densities[s]
-                self.total_elements_condensed[element] += (stoich * element_number_density)
+                self.total_elements_condensed[element] = (stoich * element_number_density)
+                if s == "Al2O3_s":
+                    print("***", s, element, stoich, element_number_density, (stoich * element_number_density), self.total_elements_condensed)
 
         # for s in self.condensing_liquids:
         #     liquid_stoich = self.liquid_molecules_library[s]
@@ -295,14 +297,16 @@ class Condensation:
                 "temperature": self.temperature,
                 "percent": percent_condensed
             })
-        print(self.percent_element_condensed["Ca"][-1]['percent'])
-        print("Percent refractories condensed:\nFe:\t{}\nMg:\t{}\nSi:\t{}\nAl:\t{}\nCa:\t{}\nTOTAL N:\t{}".format(
+        if "Al2O3_s" in self.condensing_solids:
+            print("Al", self.percent_element_condensed["Al"][-1]['percent'], self.total_elements_condensed['Al'], self.mass_balance['Al'])
+            print("O", self.percent_element_condensed["O"][-1]['percent'], self.total_elements_condensed['O'],
+                  self.mass_balance['O'])
+        print("Percent refractories condensed:\nFe:\t{}\nMg:\t{}\nSi:\t{}\nAl:\t{}\nCa:\t{}".format(
             round(self.percent_element_condensed["Fe"][-1]['percent'], 2),
             round(self.percent_element_condensed["Mg"][-1]['percent'], 2),
             round(self.percent_element_condensed["Si"][-1]['percent'], 2),
             round(self.percent_element_condensed["Al"][-1]['percent'], 2),
             round(self.percent_element_condensed["Ca"][-1]['percent'], 2),
-            self.total_number
         ))
 
         if self.percent_element_condensed["Si"][-1]["percent"] > 99.99 and self.percent_element_condensed["Mg"][-1]["percent"] > 99.99 and self.percent_element_condensed["Fe"][-1]["percent"] > 99.99:
@@ -423,13 +427,19 @@ class Condensation:
                 self.mass_balance = self.calculate_mass_balance()
                 self.solve()
 
-                # calculate solid number densities
-                self.calculate_total_number()
-
-                # calculate the percentage of each element condensed
-                self.calculate_percentage_condensed()
+                # # calculate solid number densities
+                # self.calculate_total_number()
+                #
+                # # calculate the percentage of each element condensed
+                # self.calculate_percentage_condensed()
 
                 print("Finished equilibrating potential solids!")
+
+            if self.error_threshold < 1 * 10 ** - 13:
+                # calculate solid number densities
+                self.calculate_total_number()
+                # calculate the percentage of each element condensed
+                self.calculate_percentage_condensed()
 
             self.previous_number_densities = copy.copy(self.number_densities)
             self.previous_number_densities_solids = copy.copy(self.number_densities_solids)
@@ -438,18 +448,16 @@ class Condensation:
             self.previous_removed_solids = copy.copy(self.removed_solids)
             self.previous_removed_liquids = copy.copy(self.removed_liquids)
             self.previous_temperature = self.temperature
-            self.temperature -= self.dT
             if self.error_threshold > 1 * 10**-13:
                 print("[!] Substantial solution error: {}".format(self.error_threshold))
-            if self.error_threshold < 0.05:
+            if self.error_threshold < 1 * 10 **-13:
+                self.temperature -= self.dT
                 self.any_in = True
                 self.any_out = True
             else:
-                print("[!] Substantial solution error. Aborting... ({})".format(self.error_threshold))
-                print("Errors: {}".format(self.errors))
-                print("Percent condensed: {}".format(self.percent_element_condensed))
-                self.any_in = True
-                self.any_out = True
+                self.temperature -= 0.0001
+                self.any_in = False
+                self.any_out = False
                 # sys.exit()
             if self.IS_SOLID:
                 if len(self.condensing_solids) > 0:

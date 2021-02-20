@@ -19,7 +19,7 @@ def molecule_number_density(number_densities, molecule_stoich, K, temperature, R
     for atom in molecule_stoich.keys():  # loop through elements present in molecule
         stoich = molecule_stoich[atom]  # get the stoich coefficient of the atom in the element
         if atom in fugacities:  # sum [ P_i * R * T ]^nu, nu = stoich coeff
-            total *= (number_densities[atom] * (R * temperature)) ** (stoich / 2)
+            total *= (number_densities[atom] * (R * temperature)) ** (stoich / 2.0)
         else:
             total *= (number_densities[atom] * (R * temperature)) ** stoich
     return total
