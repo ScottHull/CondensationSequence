@@ -17,4 +17,3 @@ def plot_percent_condensed(percent_condensed_dict, legend=False):
     if legend:
         ax.legend()
     plt.show()
-

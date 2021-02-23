@@ -5,6 +5,7 @@ import pandas as pd
 from src import collect_data
 import sys
 
+
 def read_janaf_file(path):
     temperature_ref = []
     delta_H_ref = []
@@ -58,8 +59,8 @@ def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
     K = np.exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
 
     # try:
-        # K = exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
-        # K = np.exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
+    # K = exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
+    # K = np.exp((-del_G_formation_reaction / (8.3144621 * temperature)))  # K = exp(-deltaG/RT)
     # except OverflowError:
     #     K = float('inf')
 
@@ -90,7 +91,6 @@ def solid_K_B3(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 
 
 def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
-
     K = 1
 
     temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("Data/Janaf/" + molecule + ".dat")

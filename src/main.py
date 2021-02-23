@@ -461,7 +461,7 @@ class Condensation:
             self.previous_removed_liquids = copy.copy(self.removed_liquids)
             self.previous_temperature = self.temperature
             if self.error_counter > 30:
-                self.number_densities[self.condensing_solids[-1]] *= 10**2
+                self.number_densities[self.condensing_solids[-1]] *= 10 ** 2
                 self.error_counter = 0
             # if self.error_threshold < 1 * 10 ** -13 or self.error_counter > 50:
             elif self.error_threshold < 1 * 10 ** -13:

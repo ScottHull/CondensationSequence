@@ -53,7 +53,7 @@ def check_in(solids, number_densities, temperature, K_dict, condensing_solids, t
                 if condensation_criterion_old <= 1:
                     new_solids.append([solid_molecule, temperature_old])
                 if condensation_criterion == 0.0:  # avoid log10(0) domain error
-                    condensation_criterion = 1.0 * 10**-100
+                    condensation_criterion = 1.0 * 10 ** -100
                 if condensation_criterion_old < 1:  # avoid log10(0) domain error
                     condensation_criterion_old = 1.000000000001
                 else:  # if the condensation criterion has just been met

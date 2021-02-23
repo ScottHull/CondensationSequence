@@ -33,8 +33,8 @@ class Solve:
 
         self.error = None
         self.error_count = 1
-        self.error_threshold = 1 * 10**10  # placeholder to keep while-loop running
-        self.ERROR_THRESHOLD_SUCCESS = 1 * 10**-13
+        self.error_threshold = 1 * 10 ** 10  # placeholder to keep while-loop running
+        self.ERROR_THRESHOLD_SUCCESS = 1 * 10 ** -13
         self.MAX_ERROR_COUNT = 50
         self.error_history = []
 
@@ -67,7 +67,6 @@ class Solve:
             sum([i ** 2 for index, i in enumerate(errors) if names[index] not in self.condensing_solids]))
         return number_densities, error_threshold
 
-
     def solver(self):
         self.names, self.initial_guess = self.__setup()
         self.current_guess = self.initial_guess
@@ -76,7 +75,3 @@ class Solve:
             self.error_history.append(error_threshold)
             self.current_guess = number_densities
             self.error_threshold = error_threshold
-
-
-
-

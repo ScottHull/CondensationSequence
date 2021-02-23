@@ -5,7 +5,7 @@ a = {'Ni': 1.66e+16, 'C': 2.692e+18, 'F': 363100000000000.0, 'H': 1e+22, 'K': 10
      'S': 1.318e+17, 'Ti': 891300000000000.0, 'N': 6.761e+17, 'Co': 977200000000000.0, 'Cl': 3162000000000000.0,
      'Ca': 2.188e+16, 'Si': 3.236e+17, 'Al': 2.818e+16, 'Ar': 2.512e+16, 'Fe': 3.162e+17, 'Na': 1.738e+16,
      'Cr': 4365000000000000.0, 'He': 8.511e+20}
-# breaking for solid 'Mg7Si8O24H2' (solid_K_B8_B5_JB)
+
 c = Condensation(
     start_temperature=2500,
     end_temperature=500,
@@ -15,4 +15,5 @@ c = Condensation(
     liquid=False,
     gas=True
 )
+
 c.sequence()
