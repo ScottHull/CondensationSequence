@@ -11,6 +11,7 @@ from src import liquids
 from src import mass_balance
 from src import solids
 from src import total_number
+from src import force_guess
 
 
 class Condensation:
@@ -91,7 +92,15 @@ class Condensation:
                 if s not in names:
                     names.append(s)
                     guess_number_density = np.append(guess_number_density,
-                                                     1.e-13)  # append a guess for all existing solids
+                                                     force_guess.get_guess(
+                                                         molecule=s,
+                                                         mass_balance=self.mass_balance,
+                                                         total_n=self.total_number,
+                                                         elements_in_solid=self.elements_in_solid,
+                                                         temperature=self.temperature,
+                                                         number_densities=self.number_densities,
+                                                         percent_condensed=self.percent_element_condensed
+                                                     ))  # append a guess for all existing solids
             for s in self.condensing_liquids:
                 if s not in names:
                     names.append(s)
@@ -114,6 +123,7 @@ class Condensation:
             sum([i ** 2 for index, i in enumerate(self.errors) if names[index] not in self.condensing_solids]))
         self.errors = dict(zip([n for n in names if n not in self.condensing_solids and n
                                 not in self.condensing_liquids], self.errors))
+
         print("Solved system!")
 
     def normalize_abundances(self, abundances):
@@ -186,7 +196,7 @@ class Condensation:
             is_solid=self.IS_SOLID
         )
 
-        if self.error_threshold > 0.05:  # if the error is smaller than the threshold
+        if self.error_threshold > 1 * 10 ** -13 and self.error_counter < 50:  # if the error is smaller than the threshold
             in_solid = False
             in_solid_temp = 0
         if not in_solid:  # if there is no new solid entering, break the loop
@@ -275,14 +285,16 @@ class Condensation:
             self.number_densities_liquids.update({i: self.number_densities[i] / self.total_number})
 
     def calculate_percentage_condensed(self):
+        for element in self.abundances.keys():  # initial setup
+            self.total_elements_condensed.update({element: 0})
+
         # get the total number density of the condensed elements
         for s in self.condensing_solids:
             solid_stoich = self.solid_molecules_library[s]
             for element in solid_stoich:
                 stoich = solid_stoich[element]
                 element_number_density = self.number_densities[s]
-                self.total_elements_condensed[element] = (stoich * element_number_density)
-                print(s, element_number_density)
+                self.total_elements_condensed[element] += (stoich * element_number_density)
 
         # for s in self.condensing_liquids:
         #     liquid_stoich = self.liquid_molecules_library[s]
@@ -298,8 +310,6 @@ class Condensation:
                 "temperature": self.temperature,
                 "percent": percent_condensed
             })
-            if "Al2O3_s" in self.condensing_solids:
-                print("Al", self.total_elements_condensed['Al'], self.mass_balance[element])
 
         if len(self.condensing_solids) > 0:
             print("Percent refractories condensed:\nFe:\t{}\nMg:\t{}\nSi:\t{}\nAl:\t{}\nCa:\t{}".format(
@@ -437,9 +447,9 @@ class Condensation:
 
                 print("Finished equilibrating potential solids!")
 
+            # calculate solid number densities
+            self.calculate_total_number()
             if self.error_threshold < 1 * 10 ** - 13:
-                # calculate solid number densities
-                self.calculate_total_number()
                 # calculate the percentage of each element condensed
                 self.calculate_percentage_condensed()
 
@@ -450,7 +460,11 @@ class Condensation:
             self.previous_removed_solids = copy.copy(self.removed_solids)
             self.previous_removed_liquids = copy.copy(self.removed_liquids)
             self.previous_temperature = self.temperature
-            if self.error_threshold < 1 * 10 ** -13 or self.error_counter > 100:
+            if self.error_counter > 30:
+                self.number_densities[self.condensing_solids[-1]] *= 10**2
+                self.error_counter = 0
+            # if self.error_threshold < 1 * 10 ** -13 or self.error_counter > 50:
+            elif self.error_threshold < 1 * 10 ** -13:
                 self.temperature -= self.dT
                 self.any_in = True
                 self.any_out = True

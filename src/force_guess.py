@@ -1,17 +1,39 @@
-def get_guess(molecule, mass_balance, total_n):
-    if molecule == 'Fe1_s':
-        return 1.e-3 * mass_balance[molecule.strip("1_s")]
-    elif molecule == 'Ni1_s':
-        return 0.5e-1 * mass_balance[molecule.strip("1_s")]
-    elif molecule == 'No1_s':
-        return 8.e-14
-    elif molecule == 'Ca1Al4O7_s':
-        return 3.e-14
-    elif molecule == 'Si1O2_s':
-        return 1.e-6 * total_n
-    elif molecule == 'Ca2Mg1Si2O7_s':
-        return 1.e-13
-    elif molecule == 'Ca2Al2Si1O7_s':
-        return 8.e-14
+def get_guess(molecule, mass_balance, total_n, percent_condensed, elements_in_solid, temperature, number_densities):
+    small_percentage_guess = False
+    for element in elements_in_solid:
+        if percent_condensed[element][-1]['percent'] < 95 and element != "O":
+            small_percentage_guess = True
+            break
+
+    if small_percentage_guess:
+        if molecule == 'Fe1_s' or molecule == 'Ni1_s' or molecule == 'Co1_s':
+            if molecule == 'Fe1_s':
+                return 1.e-3 * mass_balance[molecule.strip("1_s")]
+            elif molecule == 'Ni1_s':
+                return 0.5e-1 * mass_balance[molecule.strip("1_s")]
+            elif molecule == 'No1_s':
+                return 8.e-14
+        else:
+            if molecule != 'Mg1Si1O3_ortho_s':
+                if molecule == 'Ca1Al4O7_s':
+                    return 3.e-14
+                elif molecule == 'Si1O2_s':
+                    return 1.e-6 * total_n
+                elif molecule == 'Ca2Mg1Si2O7_s':
+                    return 1.e-13
+                elif molecule == 'Ca2Al2Si1O7_s':
+                    return 8.e-14
+                else:
+                    return 5.e-14
+            else:
+                return 2.e-14
     else:
-        return 5.e-14
+        if temperature < 1300. and 'Ti' in elements_in_solid:
+            if 'Fe' in elements_in_solid:
+                return 1.e-5 * number_densities.get('Fe')
+            else:
+                return 1.e-2 * number_densities.get('Ti')
+        elif temperature > 1300. and 'Ti' in elements_in_solid:
+            return 3.e-1 * number_densities.get('Ti')
+        else:
+            return 9.e-8 * total_n
