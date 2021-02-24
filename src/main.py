@@ -12,6 +12,7 @@ from src import mass_balance
 from src import solids
 from src import total_number
 from src import force_guess
+from src import solve
 
 
 class Condensation:
@@ -81,50 +82,64 @@ class Condensation:
 
     def solve(self):
         self.mass_balance = self.calculate_mass_balance()
-        number_densities_from_partial_pressure = self.calculate_mass_balance()
-        # list of elements given in the input
-        names = list(self.number_densities.keys())
-        guess_number_density = np.array(
-            [self.number_densities[p] for p in names])  # a list of abundances corresponding to the elements list
-        if not self.initial:
-            # a list of abundances corresponding to the elements list
-            for s in self.condensing_solids:
-                if s not in names:
-                    names.append(s)
-                    guess_number_density = np.append(guess_number_density,
-                                                     force_guess.get_guess(
-                                                         molecule=s,
-                                                         mass_balance=self.mass_balance,
-                                                         total_n=self.total_number,
-                                                         elements_in_solid=self.elements_in_solid,
-                                                         temperature=self.temperature,
-                                                         number_densities=self.number_densities,
-                                                         percent_condensed=self.percent_element_condensed
-                                                     ))  # append a guess for all existing solids
-            for s in self.condensing_liquids:
-                if s not in names:
-                    names.append(s)
-                    guess_number_density = np.append(guess_number_density,
-                                                     1.e-13)  # append a guess for all existing solids
-        self.initial = False
-        args = (names, self.element_gas_appearances, self.gas_molecules_library, self.K,
-                number_densities_from_partial_pressure,
-                self.temperature, self.condensing_solids, self.solid_molecules_library, self.condensing_liquids,
-                self.liquid_molecules_library)
-        # finds the root of the mass balance equation where the root is the number density (initial guess is just the partial pressures)
-        print("Solving system...")
-        number_densities = root(mass_balance.mass_balance, guess_number_density, args=args, method='lm',
-                                options={'maxiter': 100000000,
-                                         'ftol': 1.e-15})  # calculate the activities of gas phases corresponding to the element dict
-        self.number_densities = dict(zip(names,
-                                         number_densities.x))  # make a dictionary where the element is the key and the activity is the value
-        self.errors = mass_balance.mass_balance(number_densities.x, *args)
-        self.error_threshold = sqrt(
-            sum([i ** 2 for index, i in enumerate(self.errors) if names[index] not in self.condensing_solids]))
-        self.errors = dict(zip([n for n in names if n not in self.condensing_solids and n
-                                not in self.condensing_liquids], self.errors))
+        self.number_densities, self.error_threshold = solve.Solve(
+            condensing_solids=self.condensing_solids,
+            K=self.K,
+            element_gas_appearances=self.element_gas_appearances,
+            gas_molecules_library=self.gas_molecules_library,
+            solid_molecules_library=self.solid_molecules_library,
+            number_densities=self.number_densities,
+            number_densities_from_partial_pressure=self.mass_balance,
+            temperature=self.temperature
+        ).solver()
 
-        print("Solved system!")
+
+
+    #     self.mass_balance = self.calculate_mass_balance()
+    #     number_densities_from_partial_pressure = self.calculate_mass_balance()
+    #     # list of elements given in the input
+    #     names = list(self.number_densities.keys())
+    #     guess_number_density = np.array(
+    #         [self.number_densities[p] for p in names])  # a list of abundances corresponding to the elements list
+    #     if not self.initial:
+    #         # a list of abundances corresponding to the elements list
+    #         for s in self.condensing_solids:
+    #             if s not in names:
+    #                 names.append(s)
+    #                 guess_number_density = np.append(guess_number_density,
+    #                                                  force_guess.get_guess(
+    #                                                      molecule=s,
+    #                                                      mass_balance=self.mass_balance,
+    #                                                      total_n=self.total_number,
+    #                                                      elements_in_solid=self.elements_in_solid,
+    #                                                      temperature=self.temperature,
+    #                                                      number_densities=self.number_densities,
+    #                                                      percent_condensed=self.percent_element_condensed
+    #                                                  ))  # append a guess for all existing solids
+    #         for s in self.condensing_liquids:
+    #             if s not in names:
+    #                 names.append(s)
+    #                 guess_number_density = np.append(guess_number_density,
+    #                                                  1.e-13)  # append a guess for all existing solids
+    #     self.initial = False
+    #     args = (names, self.element_gas_appearances, self.gas_molecules_library, self.K,
+    #             number_densities_from_partial_pressure,
+    #             self.temperature, self.condensing_solids, self.solid_molecules_library, self.condensing_liquids,
+    #             self.liquid_molecules_library)
+    #     # finds the root of the mass balance equation where the root is the number density (initial guess is just the partial pressures)
+    #     print("Solving system...")
+    #     number_densities = root(mass_balance.mass_balance, guess_number_density, args=args, method='lm',
+    #                             options={'maxiter': 100000000,
+    #                                      'ftol': 1.e-15})  # calculate the activities of gas phases corresponding to the element dict
+    #     self.number_densities = dict(zip(names,
+    #                                      number_densities.x))  # make a dictionary where the element is the key and the activity is the value
+    #     self.errors = mass_balance.mass_balance(number_densities.x, *args)
+    #     self.error_threshold = sqrt(
+    #         sum([i ** 2 for index, i in enumerate(self.errors) if names[index] not in self.condensing_solids]))
+    #     self.errors = dict(zip([n for n in names if n not in self.condensing_solids and n
+    #                             not in self.condensing_liquids], self.errors))
+    #
+    #     print("Solved system!")
 
     def normalize_abundances(self, abundances):
         # norm = {}
