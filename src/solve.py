@@ -64,29 +64,29 @@ class Solve:
         errors = mass_balance.mass_balance(number_densities.x, *args)
         error_threshold = sqrt(
             sum([i ** 2 for index, i in enumerate(errors) if names[index] not in self.condensing_solids]))
-        return number_densities, error_threshold
+        return number_densities.x, error_threshold
 
     def __kick_guess(self):
-        self.initial_guess[-1] *= 1 * 10**2
+        self.initial_guess[-1] *= 1 * 10**-1
 
     def solver(self):
         if self.initial:
             print(">>> INITIAL SOLVER SETUP")
             self.names, self.initial_guess = self.__setup()
             self.current_guess = self.initial_guess
-            number_densities, error_threshold = self.__solve(names=self.names, guess=self.current_guess)
-            self.error_history.append(error_threshold)
-            self.current_guess = number_densities
-            self.error_threshold = error_threshold
+            self.current_guess, self.error_threshold = self.__solve(names=self.names, guess=self.initial_guess)
+            self.error_history.append(self.error_threshold)
             self.initial = False
         while self.error_count <= self.MAX_ERROR_COUNT and self.error_threshold > self.ERROR_THRESHOLD_SUCCESS:
             print(">>> IN MAIN ERROR LOOP ({}, count {})".format(self.error_threshold, self.error_count))
-            number_densities, error_threshold = self.__solve(names=self.names, guess=self.current_guess)
+            number_densities, error_threshold = self.__solve(names=self.names, guess=self.initial_guess)
             self.error_history.append(error_threshold)
-            self.current_guess = number_densities
+            # self.current_guess = number_densities
             self.error_threshold = error_threshold
+            self.temperature -= 0.0001
+            self.error_count += 1
         if self.error_count > self.MAX_ERROR_COUNT and self.error_threshold > self.ERROR_THRESHOLD_SUCCESS:
-            print(">>> [!] Restarting solver...")
+            print(">>> [!] Restarting solver... (trouble solid: {})...".format(self.condensing_solids[-1]))
             self.__kick_guess()
             self.error_count = 0
             self.current_guess = self.initial_guess
