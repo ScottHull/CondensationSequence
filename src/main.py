@@ -52,8 +52,6 @@ class Condensation:
         self.condensing_liquids = []
         self.removed_solids = []
         self.removed_liquids = []
-        self.previous_removed_solids = []
-        self.previous_removed_liquids = []
         self.K = {}  # a dictionary of all K equilibrium constant values
         self.previous_K = {}  # tracks K values from the previous temperature iteration
         self.number_densities = {}  # element number densities
@@ -119,6 +117,9 @@ class Condensation:
                     names.append(s)
                     guess_number_density = np.append(guess_number_density,
                                                      1.e-13)  # append a guess for all existing solids
+        if len(self.condensing_solids) > 0:
+            guess_number_density = force_guess.kick_old_guesses(names=names, condensing_solids=self.condensing_solids,
+                                                                number_densities=guess_number_density)
         self.initial = False
         args = (names, self.element_gas_appearances, self.gas_molecules_library, self.K,
                 number_densities_from_partial_pressure,
@@ -205,11 +206,10 @@ class Condensation:
             K_dict_old=self.previous_K,
             number_densities_old=self.previous_number_densities,
             removed_solids=self.removed_solids,
-            removed_solids_old=self.previous_removed_solids,
             is_solid=self.IS_SOLID
         )
 
-        if self.error_threshold > 1 * 10 ** -13 and self.error_counter < 50:  # if the error is smaller than the threshold
+        if self.error_threshold > 1 * 10 ** -12 and self.error_counter > 500:  # if the error is smaller than the threshold
             in_solid = False
             in_solid_temp = 0
         if not in_solid:  # if there is no new solid entering, break the loop
@@ -251,7 +251,6 @@ class Condensation:
             K_dict_old=self.previous_K,
             number_densities_old=self.previous_number_densities,
             removed_liquids=self.removed_liquids,
-            removed_liquids_old=self.previous_removed_liquids,
             is_liquid=self.IS_LIQUID
         )
 
@@ -462,9 +461,6 @@ class Condensation:
 
             # calculate solid number densities
             self.calculate_total_number()
-            if self.error_threshold < 1 * 10 ** - 13:
-                # calculate the percentage of each element condensed
-                self.calculate_percentage_condensed()
 
             self.previous_number_densities = copy.copy(self.number_densities)
             self.previous_number_densities_solids = copy.copy(self.number_densities_solids)
@@ -473,7 +469,9 @@ class Condensation:
             self.previous_removed_solids = copy.copy(self.removed_solids)
             self.previous_removed_liquids = copy.copy(self.removed_liquids)
             self.previous_temperature = self.temperature
-            if self.error_threshold < 1 * 10 ** -13 or self.error_counter > 50:
+            if self.error_threshold < 1 * 10 ** -12 or self.error_counter > 500:
+                # calculate the percentage of each element condensed
+                self.calculate_percentage_condensed()
                 self.temperature -= self.dT
                 self.any_in = True
                 self.any_out = True

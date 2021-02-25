@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def get_guess(molecule, mass_balance, total_n, percent_condensed, elements_in_solid, temperature, number_densities):
     small_percentage_guess = False
     for element in elements_in_solid:
@@ -8,10 +11,10 @@ def get_guess(molecule, mass_balance, total_n, percent_condensed, elements_in_so
     if small_percentage_guess:
         if molecule == 'Fe1_s' or molecule == 'Ni1_s' or molecule == 'Co1_s':
             if molecule == 'Fe1_s':
-                return 1.e-3 * mass_balance[molecule.strip("1_s")]
+                return 8.e-14
             elif molecule == 'Ni1_s':
-                return 0.5e-1 * mass_balance[molecule.strip("1_s")]
-            elif molecule == 'No1_s':
+                return 8.e-14
+            elif molecule == 'Co1_s':
                 return 8.e-14
         else:
             if molecule != 'Mg1Si1O3_ortho_s':
@@ -37,3 +40,13 @@ def get_guess(molecule, mass_balance, total_n, percent_condensed, elements_in_so
             return 3.e-1 * number_densities.get('Ti')
         else:
             return 9.e-8 * total_n
+
+
+def kick_old_guesses(names, condensing_solids, number_densities):
+    new_number_density_guess = list(number_densities)
+    for solid in condensing_solids:
+        if solid != condensing_solids[-1] and condensing_solids[-1] != 'Fe1_s' and condensing_solids[-1] != 'Co1_s' and \
+                condensing_solids[-1] != 'Ni1_s':
+            index = names.index(solid)
+            new_number_density_guess[index] *= 0.88
+    return np.array(new_number_density_guess)

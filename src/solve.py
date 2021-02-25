@@ -33,8 +33,8 @@ class Solve:
 
         self.error = None
         self.error_count = 1
-        self.error_threshold = 1 * 10**10  # placeholder to keep while-loop running
-        self.ERROR_THRESHOLD_SUCCESS = 1 * 10**-13
+        self.error_threshold = 1 * 10 ** 10  # placeholder to keep while-loop running
+        self.ERROR_THRESHOLD_SUCCESS = 1 * 10 ** -13
         self.MAX_ERROR_COUNT = 50
         self.error_history = []
 
@@ -67,7 +67,7 @@ class Solve:
         return number_densities.x, error_threshold
 
     def __kick_guess(self):
-        self.initial_guess[-1] *= 1 * 10**-1
+        self.initial_guess[-1] *= 1 * 10 ** -1
 
     def solver(self):
         if self.initial:
@@ -94,30 +94,6 @@ class Solve:
         elif self.error_threshold <= self.ERROR_THRESHOLD_SUCCESS:
             print(">>> [*] SOLVER SUCCESS ({})".format(self.error_threshold))
             return self.number_densities, self.error_threshold
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # def solve(self):
 #     self.mass_balance = self.calculate_mass_balance()
@@ -165,4 +141,3 @@ class Solve:
 #                             not in self.condensing_liquids], self.errors))
 #
 #     print("Solved system!")
-

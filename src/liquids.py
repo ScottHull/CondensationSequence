@@ -5,7 +5,7 @@ import sys
 
 
 def check_in(liquids, number_densities, temperature, K_dict, condensing_liquids, temperature_old, K_dict_old,
-             number_densities_old, removed_liquids_old, removed_liquids, is_liquid, R=8.3144621e-2):
+             number_densities_old, removed_liquids, is_liquid, R=8.3144621e-2):
     """
 
     :param liquids: A dictionary of liquid molecules and their stoichiometry
