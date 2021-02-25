@@ -12,7 +12,7 @@ from src import mass_balance
 from src import solids
 from src import total_number
 from src import force_guess
-from src import solve
+from src import output
 
 
 class Condensation:
@@ -77,6 +77,8 @@ class Condensation:
 
         self.tracked_solids = {}  # tracks in and out temperatures of the solid
         self.tracked_liquids = {}  # tracks in and out temperatures of the liquid
+
+        self.file_handler = output.OutputHandler(abundances=self.abundances)
 
     def solve(self):
         # self.mass_balance = self.calculate_mass_balance()
@@ -335,6 +337,7 @@ class Condensation:
         if self.percent_element_condensed["Si"][-1]["percent"] > 99.99 and self.percent_element_condensed["Mg"][-1][
             "percent"] > 99.99 and self.percent_element_condensed["Fe"][-1]["percent"] > 99.99:
             print("[*] Refractory elements exhausted!")
+            self.file_handler.write_to_files()
             sys.exit()
 
     def sequence(self):
@@ -472,6 +475,11 @@ class Condensation:
             if self.error_threshold < 1 * 10 ** -12 or self.error_counter > 500:
                 # calculate the percentage of each element condensed
                 self.calculate_percentage_condensed()
+                self.file_handler.write_condensed_element_percent(temperature=self.temperature,
+                                                                  percentages=self.percent_element_condensed)
+                self.file_handler.write_condensed_phases(temperature=self.temperature,
+                                                         condensing_solids=self.condensing_solids,
+                                                         condensing_liquids=self.condensing_liquids)
                 self.temperature -= self.dT
                 self.any_in = True
                 self.any_out = True
