@@ -5,7 +5,7 @@ import sys
 
 
 def check_in(liquids, number_densities, temperature, K_dict, condensing_liquids, temperature_old, K_dict_old,
-             number_densities_old, removed_liquids, is_liquid, R=8.3144621e-2):
+             number_densities_old, is_liquid, R=8.3144621e-2):
     """
 
     :param liquids: A dictionary of liquid molecules and their stoichiometry
@@ -20,10 +20,10 @@ def check_in(liquids, number_densities, temperature, K_dict, condensing_liquids,
     :param removed_liquids:
     :return:
     """
-
-    fugacities = ['H', 'Cl', 'F', 'O', 'N']  # diatomic molecules
     if not is_liquid:
         return False, False
+
+    fugacities = ['H', 'Cl', 'F', 'O', 'N']  # diatomic molecules
 
     new_liquids = []
     for liquid_molecule in liquids.keys():
@@ -45,13 +45,19 @@ def check_in(liquids, number_densities, temperature, K_dict, condensing_liquids,
         # - log10(K) - log10(prod(P_i)) = log(1 / K prod(P_i)) -> raise to power of 10 -> 1 / K prod(P_I)
         condensation_criterion = 1.0 / (
                 K_dict[liquid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
-        if condensation_criterion < 1 and temperature != temperature_old:
+        if K_dict[liquid_molecule] == float('inf') or pressure_product == float('inf'):
+            condensation_criterion = 1 * 10 ** 100
+        if condensation_criterion <= 1 and temperature != temperature_old:
             # if the partial pressure exceeds the equilibrium constant
             if liquid_molecule not in condensing_liquids:  # if the condensation criterion has previously been met
                 condensation_criterion_old = 1.0 / (
                         K_dict_old[liquid_molecule] * pressure_product_old)  # i.e. "the chemical activity exceeds 1"
-                if condensation_criterion_old < 1:
+                if condensation_criterion_old <= 1:
                     new_liquids.append([liquid_molecule, temperature_old])
+                if condensation_criterion == 0.0:  # avoid log10(0) domain error
+                    condensation_criterion = 1.0 * 10 ** -100
+                if condensation_criterion_old < 1:  # avoid log10(0) domain error
+                    condensation_criterion_old = 1.000000000001
                 else:  # if the condensation criterion has just been met
                     # interpolate the exact condensation temperature
                     # f(a) and f(b) must have different signs, so we employ log10 for a change between <1 and >1 (i.e. interpolate around log10(1) = 0)

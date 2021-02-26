@@ -43,7 +43,6 @@ class OutputHandler:
             else:
                 row.update({phase: 0})
         self.phase_file = self.phase_file.append(row, ignore_index=True)
-        print(self.phase_file)
 
     def write_to_files(self):
         self.phase_file.to_csv(self.phase_fname, index=False)

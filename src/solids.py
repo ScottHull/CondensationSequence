@@ -5,7 +5,7 @@ import sys
 
 
 def check_in(solids, number_densities, temperature, K_dict, condensing_solids, temperature_old, K_dict_old,
-             number_densities_old, removed_solids, is_solid, R=8.3144621e-2):
+             number_densities_old, is_solid, R=8.3144621e-2):
     """
 
     :param solids: A dictionary of solid molecules and their stoichiometry

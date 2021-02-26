@@ -71,9 +71,24 @@ class Condensation:
 
         self.any_in = True
         self.any_out = True
+        if self.IS_SOLID:
+            self.any_in_solid = True
+            self.any_out_solid = True
+        else:
+            self.any_in_solid = False
+            self.any_out_solid = False
+        if self.IS_LIQUID:
+            self.any_in_liquid = True
+            self.any_out_liquid = True
+        else:
+            self.any_in_liquid = False
+            self.any_out_liquid = False
+
         self.errors = []
         self.error_threshold = 0
         self.error_counter = 0
+        self.MAX_ERROR_THRESHOLD = 1 * 10 ** -12
+        self.MAX_ERROR_COUNTER = 500
 
         self.tracked_solids = {}  # tracks in and out temperatures of the solid
         self.tracked_liquids = {}  # tracks in and out temperatures of the liquid
@@ -81,48 +96,43 @@ class Condensation:
         self.file_handler = output.OutputHandler(abundances=self.abundances)
 
     def solve(self):
-        # self.mass_balance = self.calculate_mass_balance()
-        # self.number_densities, self.error_threshold = solve.Solve(
-        #     condensing_solids=self.condensing_solids,
-        #     K=self.K,
-        #     element_gas_appearances=self.element_gas_appearances,
-        #     gas_molecules_library=self.gas_molecules_library,
-        #     solid_molecules_library=self.solid_molecules_library,
-        #     number_densities=self.number_densities,
-        #     number_densities_from_partial_pressure=self.mass_balance,
-        #     temperature=self.temperature
-        # ).solver()
-
         self.mass_balance = self.calculate_mass_balance()
         number_densities_from_partial_pressure = self.calculate_mass_balance()
         # list of elements given in the input
         names = list(self.number_densities.keys())
         guess_number_density = np.array(
             [self.number_densities[p] for p in names])  # a list of abundances corresponding to the elements list
-        if not self.initial:
-            # a list of abundances corresponding to the elements list
-            for s in self.condensing_solids:
-                if s not in names:
-                    names.append(s)
-                    guess_number_density = np.append(guess_number_density,
-                                                     force_guess.get_guess(
-                                                         molecule=s,
-                                                         mass_balance=self.mass_balance,
-                                                         total_n=self.total_number,
-                                                         elements_in_solid=self.elements_in_solid,
-                                                         temperature=self.temperature,
-                                                         number_densities=self.number_densities,
-                                                         percent_condensed=self.percent_element_condensed
-                                                     ))  # append a guess for all existing solids
-            for s in self.condensing_liquids:
-                if s not in names:
-                    names.append(s)
-                    guess_number_density = np.append(guess_number_density,
-                                                     1.e-13)  # append a guess for all existing solids
-        if len(self.condensing_solids) > 0:
+        # a list of abundances corresponding to the elements list
+        for s in self.condensing_solids:
+            if s not in names:
+                names.append(s)
+                guess_number_density = np.append(guess_number_density,
+                                                 force_guess.get_guess(
+                                                     molecule=s,
+                                                     mass_balance=self.mass_balance,
+                                                     total_n=self.total_number,
+                                                     elements_in_solid=self.elements_in_solid,
+                                                     temperature=self.temperature,
+                                                     number_densities=self.number_densities,
+                                                     percent_condensed=self.percent_element_condensed
+                                                 ))  # append a guess for all existing solids
+        for s in self.condensing_liquids:
+            if s not in names:
+                names.append(s)
+                guess_number_density = np.append(guess_number_density,
+                                                 force_guess.get_guess(
+                                                     molecule=s,
+                                                     mass_balance=self.mass_balance,
+                                                     total_n=self.total_number,
+                                                     elements_in_solid=self.elements_in_solid,
+                                                     temperature=self.temperature,
+                                                     number_densities=self.number_densities,
+                                                     percent_condensed=self.percent_element_condensed
+                                                 ))  # append a guess for all existing solids
+        if len(self.condensing_solids) > 0 or len(self.condensing_liquids) > 0:
             guess_number_density = force_guess.kick_old_guesses(names=names, condensing_solids=self.condensing_solids,
+                                                                condensing_liquids=self.condensing_liquids,
                                                                 number_densities=guess_number_density)
-        self.initial = False
         args = (names, self.element_gas_appearances, self.gas_molecules_library, self.K,
                 number_densities_from_partial_pressure,
                 self.temperature, self.condensing_solids, self.solid_molecules_library, self.condensing_liquids,
@@ -136,7 +146,8 @@ class Condensation:
                                          number_densities.x))  # make a dictionary where the element is the key and the activity is the value
         self.errors = mass_balance.mass_balance(number_densities.x, *args)
         self.error_threshold = sqrt(
-            sum([i ** 2 for index, i in enumerate(self.errors) if names[index] not in self.condensing_solids]))
+            sum([i ** 2 for index, i in enumerate(self.errors) if
+                 names[index] not in self.condensing_solids and names[index] not in self.condensing_liquids]))
         self.errors = dict(zip([n for n in names if n not in self.condensing_solids and n
                                 not in self.condensing_liquids], self.errors))
 
@@ -196,39 +207,41 @@ class Condensation:
         if self.IS_SOLID:
             print("Equilibrating potential solids...")
 
-        # in_solid is the solid that condenses
-        # in_solid_temperature is the temperature at which the solid condenses
-        in_solid, in_solid_temp = solids.check_in(
-            solids=self.solid_molecules_library,
-            number_densities=self.number_densities,
-            temperature=self.temperature,
-            K_dict=self.K,
-            condensing_solids=self.condensing_solids,
-            temperature_old=self.previous_temperature,
-            K_dict_old=self.previous_K,
-            number_densities_old=self.previous_number_densities,
-            removed_solids=self.removed_solids,
-            is_solid=self.IS_SOLID
-        )
+            # in_solid is the solid that condenses
+            # in_solid_temperature is the temperature at which the solid condenses
+            in_solid, in_solid_temp = solids.check_in(
+                solids=self.solid_molecules_library,
+                number_densities=self.number_densities,
+                temperature=self.temperature,
+                K_dict=self.K,
+                condensing_solids=self.condensing_solids,
+                temperature_old=self.previous_temperature,
+                K_dict_old=self.previous_K,
+                number_densities_old=self.previous_number_densities,
+                is_solid=self.IS_SOLID
+            )
 
-        if self.error_threshold > 1 * 10 ** -12 and self.error_counter > 500:  # if the error is smaller than the threshold
-            in_solid = False
-            in_solid_temp = 0
-        if not in_solid:  # if there is no new solid entering, break the loop
-            self.any_in = False  # break out of check-in loop
-            in_solid_temp = 0
+            if self.error_threshold > self.MAX_ERROR_THRESHOLD and self.error_counter > self.MAX_ERROR_COUNTER:  # if the error is smaller than the threshold
+                in_solid = False
+                in_solid_temp = 0
+            if not in_solid:  # if there is no new solid entering, break the loop
+                self.any_in_solid = False  # break out of check-in loop
+                in_solid_temp = 0
 
-        out_solid, out_solid_temp = solids.check_out(condensing_solids=self.condensing_solids,
-                                                     number_density_solids=self.number_densities_solids,
-                                                     number_density_solids_old=self.previous_number_densities_solids,
-                                                     temperature=self.temperature,
-                                                     temperature_old=self.previous_temperature)
+            out_solid, out_solid_temp = solids.check_out(condensing_solids=self.condensing_solids,
+                                                         number_density_solids=self.number_densities_solids,
+                                                         number_density_solids_old=self.previous_number_densities_solids,
+                                                         temperature=self.temperature,
+                                                         temperature_old=self.previous_temperature)
 
-        if not out_solid:
-            self.any_out = False
-            out_solid_temp = 0
+            if not out_solid:
+                self.any_out_solid = False
+                out_solid_temp = 0
 
-        return in_solid, in_solid_temp, out_solid, out_solid_temp
+            return in_solid, in_solid_temp, out_solid, out_solid_temp
+
+        else:
+            return False, 0, False, 0
 
     def equilibrate_liquids(self):
         """
@@ -238,42 +251,44 @@ class Condensation:
         liquids.check_out: Will trigger the removal of a liquid from the system if it falls below the threshold number
             density, thereby also returning its removal temperature.
         """
+
         if self.IS_LIQUID:
             print("Equilibrating potential liquids...")
+            # in_liquid is the liquid that condenses
+            # in_liquid_temperature is the temperature at which the liquid condenses
+            in_liquid, in_liquid_temp = liquids.check_in(
+                liquids=self.liquid_molecules_library,
+                number_densities=self.number_densities,
+                temperature=self.temperature,
+                K_dict=self.K,
+                condensing_liquids=self.condensing_liquids,
+                temperature_old=self.previous_temperature,
+                K_dict_old=self.previous_K,
+                number_densities_old=self.previous_number_densities,
+                is_liquid=self.IS_LIQUID
+            )
 
-        # in_liquid is the liquid that condenses
-        # in_solid_temperature is the temperature at which the liquid condenses
-        in_liquid, in_liquid_temp = liquids.check_in(
-            liquids=self.liquid_molecules_library,
-            number_densities=self.number_densities,
-            temperature=self.temperature,
-            K_dict=self.K,
-            condensing_liquids=self.condensing_liquids,
-            temperature_old=self.previous_temperature,
-            K_dict_old=self.previous_K,
-            number_densities_old=self.previous_number_densities,
-            removed_liquids=self.removed_liquids,
-            is_liquid=self.IS_LIQUID
-        )
+            if self.error_threshold > self.MAX_ERROR_THRESHOLD and self.error_counter > self.MAX_ERROR_COUNTER:  # if the error is smaller than the threshold
+                in_liquid = False
+                in_liquid_temp = 0
+            if not in_liquid:  # if there is no new liquid entering, break the loop
+                self.any_in_liquid = False  # break out of check-in loop
+                in_liquid_temp = 0
 
-        if self.error_threshold > 1 * 10 ** -13:  # if the error is smaller than the threshold
-            in_liquid = False
-            in_liquid_temp = 0
-        if not in_liquid:  # if there is no new liquid entering, break the loop
-            self.any_in = False  # break out of check-in loop
-            in_liquid_temp = 0
+            out_liquid, out_liquid_temp = liquids.check_out(condensing_liquids=self.condensing_liquids,
+                                                            number_density_liquids=self.number_densities_liquids,
+                                                            number_density_liquids_old=self.previous_number_densities_liquids,
+                                                            temperature=self.temperature,
+                                                            temperature_old=self.previous_temperature)
 
-        out_liquid, out_liquid_temp = liquids.check_out(condensing_liquids=self.condensing_liquids,
-                                                        number_density_liquids=self.number_densities_liquids,
-                                                        number_density_liquids_old=self.previous_number_densities_liquids,
-                                                        temperature=self.temperature,
-                                                        temperature_old=self.previous_temperature)
+            if not out_liquid:
+                self.any_out_liquid = False
+                out_liquid_temp = 0
 
-        if not out_liquid:
-            self.any_out = False
-            out_liquid_temp = 0
+            return in_liquid, in_liquid_temp, out_liquid, out_liquid_temp
 
-        return in_liquid, in_liquid_temp, out_liquid, out_liquid_temp
+        else:
+            return False, 0, False, 0
 
     def calculate_total_number(self):
         # the sum of all number densities across gasses and solids
@@ -310,12 +325,13 @@ class Condensation:
                 element_number_density = self.number_densities[s]
                 self.total_elements_condensed[element] += (stoich * element_number_density)
 
-        # for s in self.condensing_liquids:
-        #     liquid_stoich = self.liquid_molecules_library[s]
-        #     for element in liquid_stoich:
-        #         stoich = liquid_stoich[element]
-        #         element_number_density = self.number_densities[element]
-        #         self.total_elements_condensed[element] += stoich * element_number_density
+        # get the total number density of the condensed elements
+        for s in self.condensing_liquids:
+            liquid_stoich = self.liquid_molecules_library[s]
+            for element in liquid_stoich:
+                stoich = liquid_stoich[element]
+                element_number_density = self.number_densities[s]
+                self.total_elements_condensed[element] += (stoich * element_number_density)
 
         for element in self.total_elements_condensed.keys():
             element_number_density = self.total_elements_condensed[element]
@@ -393,8 +409,8 @@ class Condensation:
                             {in_solid: {"In Temperature": in_solid_temp, "Out Temperature": None}})
                     self.temperature = in_solid_temp
                     self.condensing_solids.append(in_solid)
-                    self.any_out = False  # a solid has not dropped out
-                    self.any_in = True  # there is a new solid in
+                    self.any_out_solid = False  # a solid has not dropped out
+                    self.any_in_solid = True  # there is a new solid in
                     # track element in solid phase if it not already is being done
                     for s in self.solid_molecules_library[in_solid]:
                         if s not in self.elements_in_solid:
@@ -403,8 +419,8 @@ class Condensation:
                     print("OUT SOLID: {} ({} K)".format(out_solid, out_solid_temp))
                     self.tracked_solids[out_solid]["Out Temperature"] = out_solid_temp
                     self.temperature = out_solid_temp
-                    self.any_out = True  # there are exiting solids
-                    self.any_in = False  # there are no new solids
+                    self.any_out_solid = True  # there are exiting solids
+                    self.any_in_solid = False  # there are no new solids
                     self.temperature = out_solid_temp  # set the temperature to the solid-out temperature
                     self.condensing_solids.remove(
                         out_solid)  # remove the outgoing solid from the condensing solids list
@@ -416,24 +432,24 @@ class Condensation:
 
                 # out_liquid_temp and in_liquid_temp are 0 if an actual out_liquid_temp or in_liquid_temp are calculated.
                 if in_liquid_temp > out_liquid_temp:  # if the appearance temperature is greater than the disappearance temperature
-                    print("IN liquid: {} ({} K)".format(in_liquid, in_liquid_temp))
+                    print("IN LIQUID: {} ({} K)".format(in_liquid, in_liquid_temp))
                     if in_liquid not in self.tracked_liquids.keys():
                         self.tracked_liquids.update(
                             {in_liquid: {"In Temperature": in_liquid_temp, "Out Temperature": None}})
                     self.temperature = in_liquid_temp
                     self.condensing_liquids.append(in_liquid)
-                    self.any_out = False  # a liquid has not dropped out
-                    self.any_in = True  # there is a new liquid in
+                    self.any_out_liquid = False  # a liquid has not dropped out
+                    self.any_in_liquid = True  # there is a new liquid in
                     # track element in liquid phase if it not already is being done
                     for s in self.liquid_molecules_library[in_liquid]:
                         if s not in self.elements_in_liquid:
                             self.elements_in_liquid.append(s)
                 elif out_liquid_temp > in_liquid_temp:  # if the disappearance temperature is greater than the appearance temperature
-                    print("OUT liquid: {} ({} K)".format(out_liquid, out_liquid_temp))
+                    print("OUT LIQUID: {} ({} K)".format(out_liquid, out_liquid_temp))
                     self.tracked_liquids[out_liquid]["Out Temperature"] = out_liquid_temp
                     self.temperature = out_liquid_temp
-                    self.any_out = True  # there are exiting liquids
-                    self.any_in = False  # there are no new liquids
+                    self.any_out_liquid = True  # there are exiting liquids
+                    self.any_in_liquid = False  # there are no new liquids
                     self.temperature = out_liquid_temp  # set the temperature to the liquid-out temperature
                     self.condensing_liquids.remove(
                         out_liquid)  # remove the outgoing liquid from the condensing liquids list
@@ -443,7 +459,18 @@ class Condensation:
 
                     self.removed_liquids.append(out_liquid)  # track the exit of the liquid
 
-            if self.any_out or self.any_in:  # if there are any solids introduced or dropped by the above loop, then recalculate the number densities and abundances
+                # if there are new phases entering or exiting across the condensed solid/liquid set, then set proper parameters
+                if self.any_in_solid or self.any_in_liquid:
+                    self.any_in = True
+                else:
+                    self.any_in = False
+                if self.any_out_solid or self.any_out_liquid:
+                    self.any_out = True
+                else:
+                    self.any_out = False
+
+            # if there are any solids introduced or dropped by the above loop, then recalculate the number densities and abundances
+            if self.any_out or self.any_in:
                 self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
                 self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
                                  temperature=self.temperature, gas_methods=self.gas_methods,
@@ -454,25 +481,17 @@ class Condensation:
                 self.mass_balance = self.calculate_mass_balance()
                 self.solve()
 
-                # # calculate solid number densities
-                # self.calculate_total_number()
-                #
-                # # calculate the percentage of each element condensed
-                # self.calculate_percentage_condensed()
-
-                print("Finished equilibrating potential solids!")
-
             # calculate solid number densities
             self.calculate_total_number()
 
+            # retain parameters from previous iterations
             self.previous_number_densities = copy.copy(self.number_densities)
             self.previous_number_densities_solids = copy.copy(self.number_densities_solids)
             self.previous_number_densities_liquids = copy.copy(self.number_densities_liquids)
             self.previous_K = copy.copy(self.K)
-            self.previous_removed_solids = copy.copy(self.removed_solids)
-            self.previous_removed_liquids = copy.copy(self.removed_liquids)
             self.previous_temperature = self.temperature
-            if self.error_threshold < 1 * 10 ** -12 or self.error_counter > 500:
+
+            if self.error_threshold < self.MAX_ERROR_THRESHOLD or self.error_counter > self.MAX_ERROR_COUNTER:
                 # calculate the percentage of each element condensed
                 self.calculate_percentage_condensed()
                 self.file_handler.write_condensed_element_percent(temperature=self.temperature,

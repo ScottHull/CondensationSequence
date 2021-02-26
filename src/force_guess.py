@@ -42,11 +42,15 @@ def get_guess(molecule, mass_balance, total_n, percent_condensed, elements_in_so
             return 9.e-8 * total_n
 
 
-def kick_old_guesses(names, condensing_solids, number_densities):
+def kick_old_guesses(names, condensing_solids, condensing_liquids, number_densities):
     new_number_density_guess = list(number_densities)
     for solid in condensing_solids:
         if solid != condensing_solids[-1] and condensing_solids[-1] != 'Fe1_s' and condensing_solids[-1] != 'Co1_s' and \
                 condensing_solids[-1] != 'Ni1_s':
             index = names.index(solid)
+            new_number_density_guess[index] *= 0.88
+    for liquid in condensing_liquids:
+        if liquid != condensing_liquids[-1]:
+            index = names.index(liquid)
             new_number_density_guess[index] *= 0.88
     return np.array(new_number_density_guess)
