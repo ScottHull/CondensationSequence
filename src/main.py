@@ -341,7 +341,7 @@ class Condensation:
                 "percent": percent_condensed
             })
 
-        if len(self.condensing_solids) > 0:
+        if len(self.condensing_solids) or len(self.condensing_liquids) > 0:
             print("Percent refractories condensed:\nFe:\t{}\nMg:\t{}\nSi:\t{}\nAl:\t{}\nCa:\t{}".format(
                 round(self.percent_element_condensed["Fe"][-1]['percent'], 2),
                 round(self.percent_element_condensed["Mg"][-1]['percent'], 2),

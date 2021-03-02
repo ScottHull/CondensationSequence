@@ -12,8 +12,8 @@ c = Condensation(
     end_temperature=500,
     abundances=a,
     total_pressure=1 * 10 ** -3,
-    solid=True,
-    liquid=False,
+    solid=False,
+    liquid=True,
     gas=True
 )
 
