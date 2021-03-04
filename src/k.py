@@ -37,7 +37,7 @@ def calc_solid_K(molecule, temperature, delta_H, S0, C0, C1, C2, C3):
 
     for atom in atoms_in_molecule:
         temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file(
-            "Data/Reference/" + atom[0] + "_ref.dat")
+            "data/Reference/" + atom[0] + "_ref.dat")
 
         H0 = collect_data.lookup_and_interpolate(temperature_ref, H_ref, 298.15) * 1000.
         change_H = collect_data.lookup_and_interpolate(temperature_ref, delta_H_ref, temperature) * 1000.
@@ -93,7 +93,7 @@ def solid_K_B3(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
 def solid_K_J(molecule, temperature, k0, k1, k2, k3, S0, delta_H):
     K = 1
 
-    temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("Data/Janaf/" + molecule + ".dat")
+    temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("data/Janaf/" + molecule + ".dat")
 
     if temperature > float(temperature_ref[-1]):
         C0 = k0 * ((temperature - 298.15) - (temperature * (log(temperature) - log(298.15))))
@@ -130,7 +130,7 @@ def get_K_solids(temperature):
     Initial function for calculating the K equilibrium constant values of solid molecules.
     """
     K_dict = {}
-    molecules = pd.read_csv("Data/Solids/Solids_Cp.dat", delimiter="\t", header=None, skiprows=1, index_col=False)
+    molecules = pd.read_csv("data/Solids/Solids_Cp.dat", delimiter="\t", header=None, skiprows=1, index_col=False)
 
     for row in molecules.itertuples(index=False):
         molecule = row[0]
@@ -166,6 +166,9 @@ def get_K_solids(temperature):
 
     return K_dict
 
+def gas_F(temperature, A, B):
+    log10K = A + (B / temperature)
+    return 10 ** log10K
 
 def gas_J(temperature, molecule, R=8.3144621):
     """
@@ -175,7 +178,7 @@ def gas_J(temperature, molecule, R=8.3144621):
     :param R:
     :return:
     """
-    temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("Data/Gasses/" + molecule + ".dat")
+    temperature_ref, delta_H_ref, H_ref, S_ref, delta_G_ref, K_ref = read_janaf_file("data/Gasses/" + molecule + ".dat")
     delta_G_gas = collect_data.lookup_and_interpolate(temperature_ref, delta_G_ref,
                                                       temperature) * 1000  # interpolate deltaG
     if temperature < temperature_ref[-1]:
@@ -191,7 +194,7 @@ def gas_J(temperature, molecule, R=8.3144621):
 
 
 def gas_K(temperature, molecule, R=8.3144621):
-    path = pd.read_csv("Data/Gasses.dat", delimiter="\t", header=None, index_col=0)
+    path = pd.read_csv("data/Gasses.dat", delimiter="\t", header=None, index_col=0)
     data = path.loc[molecule]
     H0 = float(data[2])
     S0 = float(data[3])
@@ -215,7 +218,7 @@ def gas_K(temperature, molecule, R=8.3144621):
         G_ref = []
         H_ref = []
 
-        path = open("Data/Reference/" + i[0] + "_ref.dat", "rU")
+        path = open("data/Reference/" + i[0] + "_ref.dat", "rU")
         for aRow in path:
             if not aRow.startswith("#"):
                 values = aRow.split('\t')
@@ -238,7 +241,7 @@ def gas_K(temperature, molecule, R=8.3144621):
 
 
 def gas_P(temperature, molecule, R=8.3144621):
-    path_molecule = open("Data/Gasses/" + molecule + ".dat", "r")
+    path_molecule = open("data/Gasses/" + molecule + ".dat", "r")
     Temp_ref = []
     del_G_ref = []
 
@@ -261,7 +264,7 @@ def gas_P(temperature, molecule, R=8.3144621):
         G_ref = []
         H_ref = []
 
-        path = open("Data/Reference/" + i[0] + "_ref.dat", "r")
+        path = open("data/Reference/" + i[0] + "_ref.dat", "r")
         for aRow in path:
             if not aRow.startswith("#"):
                 values = aRow.split('\t')
@@ -284,24 +287,35 @@ def gas_P(temperature, molecule, R=8.3144621):
     return K
 
 
-def get_K_gas(molecules, methods, temperature):
+def get_K_gas(temperature):
     """
     The initial function for calculating the K equilibrium constants for gasses.
     """
+    gas_file = open("data/Gasses.dat", 'r')
     K_gas = {}
-    for m in molecules:
-        method = methods[m]  # define method for determining K value (i.e. J = JANAF)
-        if method == "J":  # JANAF
-            K = gas_J(temperature=temperature, molecule=m)
-            K_gas.update({m: K})
+    for row in gas_file:
+        if not row.startswith("#"):
+            values = row.split('\t')
+            molecule = values[0]
+            method = values[1]  # define method for determining K value (i.e. J = JANAF)
 
-        elif method == "K":
-            K = gas_K(temperature=temperature, molecule=m)
-            K_gas.update({m: K})
-
-        elif method == "P":
-            K = gas_P(temperature=temperature, molecule=m)
-            K_gas.update({m: K})
+            if method == "J":  # JANAF
+                K = gas_J(temperature=temperature, molecule=molecule)
+                K_gas.update({molecule: K})
+    
+            elif method == "K":
+                K = gas_K(temperature=temperature, molecule=molecule)
+                K_gas.update({molecule: K})
+    
+            elif method == "P":
+                K = gas_P(temperature=temperature, molecule=molecule)
+                K_gas.update({molecule: K})
+    
+            elif method == "F":
+                A = float(values[2])
+                B = float(values[3])
+                K = gas_F(temperature=temperature, A=A, B=B)
+                K_gas.update({molecule: K})
 
     return K_gas  # returns a dict of all K values for gasses
 
@@ -314,7 +328,7 @@ def liquid_J(temperature, molecule, R=8.3144621):
     :param R:
     :return:
     """
-    path_molecule = pd.read_csv("Data/Liquids/" + molecule + ".dat", delimiter="\t", skiprows=2, header=None,
+    path_molecule = pd.read_csv("data/Liquids/" + molecule + ".dat", delimiter="\t", skiprows=2, header=None,
                                 index_col=False)
     reference_temperature = path_molecule[0]
     delta_G_ref = path_molecule[6]
@@ -332,12 +346,16 @@ def liquid_J(temperature, molecule, R=8.3144621):
         return 1
 
 
+def liquid_F(temperature, A, B):
+    return 10**(A + (B / temperature))
+
 def get_K_liquid(temperature):
     """
     Initial function for calculating the K equilibrium constant values of liquid molecules.
     """
     K_dict = {}
-    molecules = pd.read_csv("Data/Liquids.dat", delimiter="\t", header=None, skiprows=0, index_col=False)
+    # molecules = pd.read_csv("data/Liquids.dat", delimiter="\t", header=None, skiprows=0, index_col=False)
+    molecules = pd.read_csv("data/liquid_pseudospecies_fegley_1986.dat", delimiter="\t", header=None, skiprows=1, index_col=False)
 
     for row in molecules.itertuples(index=False):
         molecule = row[0]
@@ -345,6 +363,8 @@ def get_K_liquid(temperature):
 
         if method == 'J':
             K = liquid_J(molecule=molecule, temperature=temperature)
+        elif method == "F":
+            K = liquid_F(temperature=temperature, A=row[2], B=row[3])
         else:
             K = 1
 
@@ -359,7 +379,7 @@ def get_K(gas_molecules, gas_methods, solid_molecules, liquid_molecules, tempera
     """
     K_dict = {}
     if gas:
-        K_gas = get_K_gas(molecules=gas_molecules.keys(), methods=gas_methods, temperature=temperature)
+        K_gas = get_K_gas(temperature=temperature)
         K_dict.update(K_gas)
     if liquid:
         K_liquid = get_K_liquid(temperature=temperature)

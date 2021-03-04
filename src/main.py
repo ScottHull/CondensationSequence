@@ -2,6 +2,7 @@ import copy
 from math import sqrt
 import sys
 
+import pandas as pd
 import numpy as np
 from scipy.optimize import root
 
@@ -160,24 +161,25 @@ class Condensation:
         #     norm.update({element: self.abundances[element] / total})
         # return norm
 
-        H = self.abundances['H']
-        He = self.abundances['He']
-        Ne = self.abundances['Ne']
-        Ar = self.abundances['Ar']
-        X = 0
-        if self.initial:
-            K = k.get_K_gas(molecules=self.gas_molecules_library.keys(), methods=self.gas_methods,
-                            temperature=self.temperature)
-            X = K["H1"] ** 2
-        else:
-            X = self.K["H1"] ** 2
-        H2_coef_a = 4. + X
-        H2_coef_b = -((4. * H) + (X * H))
-        H2_coef_c = H ** 2
-
-        H2 = ((-H2_coef_b) - np.sqrt(pow(H2_coef_b, 2.) - (4. * H2_coef_a * H2_coef_c))) / (2. * H2_coef_a)
-        monoH = H - 2. * H2
-        total = monoH + H2 + He + Ne + Ar
+        # H = self.abundances['H']
+        # He = self.abundances['He']
+        # Ne = self.abundances['Ne']
+        # Ar = self.abundances['Ar']
+        # X = 0
+        # if self.initial:
+        #     K = k.get_K_gas(molecules=self.gas_molecules_library.keys(), methods=self.gas_methods,
+        #                     temperature=self.temperature)
+        #     X = K["H1"] ** 2
+        # else:
+        #     X = self.K["H1"] ** 2
+        # H2_coef_a = 4. + X
+        # H2_coef_b = -((4. * H) + (X * H))
+        # H2_coef_c = H ** 2
+        #
+        # H2 = ((-H2_coef_b) - np.sqrt(pow(H2_coef_b, 2.) - (4. * H2_coef_a * H2_coef_c))) / (2. * H2_coef_a)
+        # monoH = H - 2. * H2
+        # total = monoH + H2 + He + Ne + Ar
+        total = sum(self.abundances.values())
         normalized_abundances = {}
         for element in self.abundances.keys():
             normalized_abundances.update({element: self.abundances[element] / total})
