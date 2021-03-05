@@ -52,6 +52,7 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
             zero = 1.0 - (log10(gas_element_mass_balance[element] + solid_mb) / log10(number_densities_dict[element]))
             mass_balance_zero.update({element: zero})
 
+    # TODO: the sum in this zero might be invalid if there is also a solid
     if len(condensing_liquids) > 0:  # only perform if there are any condensing liquids
         for element in liquid_element_mass_balance:
             liquid_mb = liquid_element_mass_balance[element]

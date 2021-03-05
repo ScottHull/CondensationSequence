@@ -45,6 +45,7 @@ def check_in(liquids, number_densities, temperature, K_dict, condensing_liquids,
         # - log10(K) - log10(prod(P_i)) = log(1 / K prod(P_i)) -> raise to power of 10 -> 1 / K prod(P_I)
         condensation_criterion = 1.0 / (
                 K_dict[liquid_molecule] * pressure_product)  # i.e. "the chemical activity exceeds 1"
+        print(liquid_molecule, condensation_criterion)
         if K_dict[liquid_molecule] == float('inf') or pressure_product == float('inf'):
             condensation_criterion = 1 * 10 ** 100
         if condensation_criterion <= 1 and temperature != temperature_old:

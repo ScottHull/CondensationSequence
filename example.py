@@ -16,12 +16,12 @@ bulk_moon = {
     "Ca": 1.270525392,
     "Na": 0.034834503,
     "K": 0.001833649,
-    "Zn": 5.30606E-05,
+    # "Zn": 5.30606E-05,
     "O": 58.43994733
 }  # atom%
 
 c = Condensation(
-    start_temperature=2500,
+    start_temperature=4000,
     end_temperature=500,
     abundances=bulk_moon,
     total_pressure=1 * 10 ** -3,
