@@ -1,4 +1,5 @@
 from src.main import Condensation
+from src import plots
 
 a = {'Ni': 1.66e+16, 'C': 2.692e+18, 'F': 363100000000000.0, 'H': 1e+22, 'K': 1072000000000000.0,
      'Mn': 2692000000000000.0, 'Mg': 3.981e+17, 'O': 4.898e+18, 'Ne': 8.511e+17, 'P': 2570000000000000.0,
@@ -6,14 +7,19 @@ a = {'Ni': 1.66e+16, 'C': 2.692e+18, 'F': 363100000000000.0, 'H': 1e+22, 'K': 10
      'Ca': 2.188e+16, 'Si': 3.236e+17, 'Al': 2.818e+16, 'Ar': 2.512e+16, 'Fe': 3.162e+17, 'Na': 1.738e+16,
      'Cr': 4365000000000000.0, 'He': 8.511e+20}
 
-c = Condensation(
-    start_temperature=2500,
-    end_temperature=500,
-    abundances=a,
-    total_pressure=1 * 10 ** -3,
-    solid=True,
-    liquid=False,
-    gas=True
-)
+# c = Condensation(
+#     start_temperature=2500,
+#     end_temperature=500,
+#     abundances=a,
+#     total_pressure=1 * 10 ** -3,
+#     solid=True,
+#     liquid=False,
+#     gas=True
+# )
 
-c.sequence()
+# c.sequence()
+
+# plots.plot_number_densities(base_path="outputs")
+plots.plot_mole_fractions(base_path="outputs")
+
+

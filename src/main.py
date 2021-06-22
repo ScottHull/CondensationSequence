@@ -13,12 +13,16 @@ from src import solids
 from src import total_number
 from src import force_guess
 from src import solve
+from src import report
 
 
 class Condensation:
 
     def __init__(self, start_temperature, end_temperature, abundances, total_pressure, dT=2,
-                 gas=True, liquid=True, solid=True):
+                 gas=True, liquid=True, solid=True, base_path="outputs"):
+        self.base_path = base_path
+        self.iteration = 0
+        report.build_subdirs(base_path=self.base_path)  # make path for output files
         self.IS_GAS = gas  # if we are to equilibrate solids
         self.IS_LIQUID = liquid  # if we are to equilibrate liquids
         self.IS_SOLID = solid  # if we are to equilibrate solids
@@ -488,3 +492,12 @@ class Condensation:
             if self.IS_LIQUID:
                 if len(self.condensing_liquids) > 0:
                     print("Stable liquids: {}".format(self.condensing_liquids))
+
+            report.write_report(
+                path=self.base_path,
+                temperature=self.temperature,
+                percent_condensed_dict=self.percent_element_condensed,
+                number_densities=self.number_densities,
+                iteration=self.iteration
+            )
+            self.iteration += 1
