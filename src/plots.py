@@ -98,3 +98,33 @@ def plot_number_densities(base_path):
     ax.legend()
 
     plt.show()
+
+def plot_percent_condensed(base_path):
+    path = base_path + "/percent_condensed"
+    data = {}
+    temperatures = []
+    for f in os.listdir(path):
+        temperature, d = __read_file(path=path + "/{}".format(f))
+        temperatures.append(temperature)
+        for element in d.keys():
+            if element not in data.keys():
+                data.update({element: {}})
+            data[element].update({temperature: d[element]})
+    fig = plt.figure(figsize=(16, 9))
+    ax = fig.add_subplot(111)
+    for element in data.keys():
+        temperatures = data[element].keys()
+        d = [data[element][t] for t in temperatures]
+        ax.plot(
+            temperatures,
+            d,
+            linewidth=2.0,
+            label=element.replace("_s", "")
+        )
+    ax.invert_xaxis()
+    ax.set_xlabel("Temperature (K)")
+    ax.set_ylabel("Percent Condensed")
+    ax.grid()
+    ax.legend()
+
+    plt.show()
