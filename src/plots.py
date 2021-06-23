@@ -62,6 +62,7 @@ def plot_mole_fractions(base_path):
     ax.invert_xaxis()
     ax.set_xlabel("Temperature (K)")
     ax.set_ylabel("Mole Fraction")
+    ax.set_title("Mole Fraction of Condensed Solids")
     ax.grid()
     ax.legend()
 
@@ -128,3 +129,50 @@ def plot_percent_condensed(base_path):
     ax.legend()
 
     plt.show()
+
+def plot_refractory_oxygen(base_path, solid_element_dict):
+    mb_path = base_path + "/mass_balance"
+    nd_path = base_path + "/number_densities"
+    nd_data = {}
+    mb_data = {}
+    temperatures = []
+    for f in os.listdir(nd_path):
+        temperature, d = __read_file(path=nd_path + "/{}".format(f))
+        temperatures.append(temperature)
+        for element in d.keys():
+            if "_s" in element:
+                stoich = solid_element_dict[element]
+                if "O" in stoich.keys():
+                    if element not in nd_data.keys():
+                        nd_data.update({element: {}})
+                    nd_data[element].update({temperature: d[element] * stoich["O"]})
+
+    for f in os.listdir(mb_path):
+        temperature, d = __read_file(path=mb_path + "/{}".format(f))
+        temperatures.append(temperature)
+        for element in d.keys():
+            if element not in mb_data.keys():
+                mb_data.update({element: {}})
+            mb_data[element].update({temperature: d[element]})
+
+    fig = plt.figure(figsize=(16, 9))
+    ax = fig.add_subplot(111)
+    for element in nd_data.keys():
+        temperatures = nd_data[element].keys()
+        d = [nd_data[element][t] / mb_data['O'][t] * 100.0 for t in temperatures]
+        ax.plot(
+            temperatures,
+            d,
+            linewidth=2.0,
+            label=element.replace("_s", "")
+        )
+    ax.invert_xaxis()
+    ax.set_xlabel("Temperature (K)")
+    ax.set_ylabel("Percent Refractory O")
+    ax.set_title("Percent Refractory Oxygen in Condensed Solids")
+    ax.grid()
+    ax.legend()
+
+    plt.show()
+
+

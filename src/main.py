@@ -14,6 +14,7 @@ from src import total_number
 from src import force_guess
 from src import solve
 from src import report
+from src import refractory_oxygen
 
 
 class Condensation:
@@ -22,7 +23,6 @@ class Condensation:
                  gas=True, liquid=True, solid=True, base_path="outputs"):
         self.base_path = base_path
         self.iteration = 0
-        report.build_subdirs(base_path=self.base_path)  # make path for output files
         self.IS_GAS = gas  # if we are to equilibrate solids
         self.IS_LIQUID = liquid  # if we are to equilibrate liquids
         self.IS_SOLID = solid  # if we are to equilibrate solids
@@ -336,6 +336,13 @@ class Condensation:
                 round(self.percent_element_condensed["Ca"][-1]['percent'], 2),
             ))
 
+        # calculate refractory oxygen percent condensed
+        total_pct_ro, ro_in_phases = refractory_oxygen.calculate_refractory_oxygen_percent(
+            number_densities=self.number_densities,
+            solid_molecule_library=self.solid_molecules_library,
+            mass_balance=self.mass_balance
+        )
+
         if self.percent_element_condensed["Si"][-1]["percent"] > 99.99 and self.percent_element_condensed["Mg"][-1][
             "percent"] > 99.99 and self.percent_element_condensed["Fe"][-1]["percent"] > 99.99:
             print("[*] Refractory elements exhausted!")
@@ -356,6 +363,7 @@ class Condensation:
         :return:
         """
         print("Initial setup...")
+        report.build_subdirs(base_path=self.base_path)  # make path for output files
         self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
         self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
                          temperature=self.temperature, gas_methods=self.gas_methods,
@@ -498,6 +506,7 @@ class Condensation:
                 temperature=self.temperature,
                 percent_condensed_dict=self.percent_element_condensed,
                 number_densities=self.number_densities,
+                mass_balance=self.mass_balance,
                 iteration=self.iteration
             )
             self.iteration += 1
