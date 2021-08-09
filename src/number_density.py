@@ -44,7 +44,7 @@ def number_density_element_gas(element_appearances_in_molecules, molecule_librar
         molecules = element_appearances_in_molecules[element]  # get the list of molecules in which the element appears
         for molecule in molecules:  # e.g. H2O
             K = K_dict[molecule]  # K value of the molecule
-            molecule_number_density = K / (R * temperature)  # P_H2O = (K_H2O * prod(P_reactant_elements)) / RT
+            molecule_number_density = K / (R * temperature)  # the full number density is calculated down below, i.e. P_H2O = (K_H2O * prod(P_reactant_elements)) / RT
             molecule_stoich = molecule_library[molecule]  # get the stoichiometry of the molecule
             for component_element in molecule_stoich:  # e.g. {H: 2, O: 1}
                 if guess_number_densities[component_element] > 0:  # negative guesses break the simulation
@@ -54,12 +54,15 @@ def number_density_element_gas(element_appearances_in_molecules, molecule_librar
                         power /= 2.0  # e.g. for H: 2/2 = 1
                     if component_element != element:  # only multiply by stoich coefficient if this is the element in focus
                         component_stoich = 1
+                    # i.e. n_H2O = K_H2O * (RT)^-1 * (n_H2 RT) * (n_O2 RT)^0.5
+                    # for example, this function would multiply on the (n_O2 RT)^0.5 to the equation above
+                    # component stioch adds on a coefficient, so it would add 2n_CO2 calculating N_O like
                     molecule_number_density *= component_stoich * (
                             guess_number_densities[component_element] * R * temperature) ** power
                 else:  # force the solver to re-guess
                     molecule_number_density = 1e999
                     break
-            atom_number_density += molecule_number_density
+            atom_number_density += molecule_number_density  # i.e. N_O += 2n_CO2
         element_number_densities.update({element: atom_number_density})
     return element_number_densities
 

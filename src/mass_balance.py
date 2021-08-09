@@ -46,6 +46,8 @@ def mass_balance(guess_number_density, ordered_names, gas_element_appearances_in
             gas_mb)  # want the difference between the partial pressure proportionality and calculated number density to be 0, or the ratio to be 1, log10 helps speed calculation
         mass_balance_zero.update({element: zero})
 
+    # TODO: the condensing solid number density must be added to the liquid number density and then add them to the
+    #  gas number density, i.e. log10(gas_element_mass_balance[element] + solid_mb + liquid_mb
     if len(condensing_solids) > 0:  # only perform if there are any condensing solids
         for element in solid_element_mass_balance:
             solid_mb = solid_element_mass_balance[element]

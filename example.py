@@ -17,7 +17,7 @@ c = Condensation(
     gas=True
 )
 
-# c.sequence()
+c.sequence()
 
 # plots.plot_number_densities(base_path="outputs")
 plots.plot_mole_fractions(base_path="outputs")

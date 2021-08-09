@@ -56,7 +56,6 @@ class Condensation:
         self.condensing_liquids = []
         self.removed_solids = []
         self.removed_liquids = []
-        self.K = {}  # a dictionary of all K equilibrium constant values
         self.previous_K = {}  # tracks K values from the previous temperature iteration
         self.number_densities = {}  # element number densities
         self.previous_number_densities = {}  # tracks number density solution from the previous temperature iteration
