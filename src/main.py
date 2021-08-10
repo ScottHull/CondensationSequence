@@ -18,7 +18,7 @@ from src import output
 
 class Condensation:
 
-    def __init__(self, start_temperature, end_temperature, abundances, total_pressure, dT=2,
+    def __init__(self, start_temperature, end_temperature, abundances, total_pressure, solids, liquids, gasses, dT=2,
                  gas=True, liquid=True, solid=True):
         self.IS_GAS = gas  # if we are to equilibrate solids
         self.IS_LIQUID = liquid  # if we are to equilibrate liquids
@@ -35,10 +35,9 @@ class Condensation:
         self.total_pressure = total_pressure
         self.gas_methods = collect_data.get_methods(
             path="data/Gasses.dat")  # methods for calculating K for gasses (i.e. JANAF)
-        self.gas_molecules_library = collect_data.get_atoms_from_molecule(path="data/Gasses.dat")
-        self.liquid_molecules_library = collect_data.get_atoms_from_molecule(path="data/Liquids.dat", liquid=True)
-        self.solid_molecules_library = collect_data.get_atoms_from_molecule(path="data/Solids_Cp.dat", skiprows=1,
-                                                                            solid=True)
+        self.gas_molecules_library = collect_data.get_atoms_from_molecule(molecules=gasses)
+        self.liquid_molecules_library = collect_data.get_atoms_from_molecule(molecules=liquids, liquid=True)
+        self.solid_molecules_library = collect_data.get_atoms_from_molecule(molecules=solids, solid=True)
         self.abundances = abundances
         self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
         self.element_gas_appearances = collect_data.element_appearances_in_molecules(abundances=self.abundances,
@@ -388,10 +387,11 @@ class Condensation:
             print("AT TEMPERATURE: {}".format(self.temperature))
 
             self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
-            self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
-                             temperature=self.temperature, gas_methods=self.gas_methods,
-                             liquid_molecules=self.liquid_molecules_library, gas=self.IS_GAS, liquid=self.IS_LIQUID,
-                             solid=self.IS_SOLID)
+            # self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
+            #                  temperature=self.temperature, gas_methods=self.gas_methods,
+            #                  liquid_molecules=self.liquid_molecules_library, gas=self.IS_GAS, liquid=self.IS_LIQUID,
+            #                  solid=self.IS_SOLID)
+            self.K = k.get_K_vf(self=self, temperature=self.temperature)
 
             self.solve()  # run the root solver
 
@@ -475,10 +475,11 @@ class Condensation:
             # if there are any solids introduced or dropped by the above loop, then recalculate the number densities and abundances
             if self.any_out or self.any_in:
                 self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
-                self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
-                                 temperature=self.temperature, gas_methods=self.gas_methods,
-                                 liquid_molecules=self.liquid_molecules_library, gas=self.IS_GAS, liquid=self.IS_LIQUID,
-                                 solid=self.IS_SOLID)
+                # self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
+                #                  temperature=self.temperature, gas_methods=self.gas_methods,
+                #                  liquid_molecules=self.liquid_molecules_library, gas=self.IS_GAS, liquid=self.IS_LIQUID,
+                #                  solid=self.IS_SOLID)
+                self.K = k.get_K_vf(self=self, temperature=self.temperature)
 
                 # resolve the system for new solids
                 self.mass_balance = self.calculate_mass_balance()

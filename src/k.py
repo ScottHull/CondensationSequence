@@ -406,12 +406,15 @@ def __get_constants_vf():
     constants = {}  # A, B in log10(K) = A + B/T
     for species in base_liq_df.index:
         A, B = base_liq_df["A"][species], base_liq_df["B"][species]
+        species = collect_data.reformat_species_name(name=species)
         constants.update({species + "_l": {"A": A, "B": B}})
     for species in gas_df.index:
         A, B = gas_df["A"][species], gas_df["B"][species]
+        species = collect_data.reformat_species_name(name=species)
         constants.update({species: {"A": A, "B": B}})
     for species in liq_df.index:
         A, B = liq_df["A"][species], liq_df["B"][species]
+        species = collect_data.reformat_species_name(name=species)
         constants.update({species + "_l": {"A": A, "B": B}})
 
     return constants
@@ -422,12 +425,14 @@ def get_K_vf(self, temperature):
     K constants provided by methods of Vischer & Fegley 1987.
     :return:
     """
-    base_oxides = ["SiO2_l", 'MgO', "FeO_l", "CaO_l", "Al2O3_l", "TIO2_l", "Na2O_l", "K2O_l", "ThO2_l", "UO2_l",
-                   "PuO2_l"]
+    base_oxides = ["Si1O2_l", 'Mg1O1', "Fe1O1_l", "Ca1O1_l", "Al2O3_l", "Ti1O2_l", "Na2O1_l", "K2O1_l", "Th1O2_l",
+                   "U1O2_l", "Pu1O2_l"]
     self.constants = __get_constants_vf()
     K_dict = {}
     for species in self.constants.keys():
         K_dict.update(({
             species: __vf_K(A=self.constants[species]["A"], B=self.constants[species]["B"], T=temperature)
         }))
-    print(K_dict)
+        if species in base_oxides:  # get inverse for vaporization K values
+            K_dict[species] = K_dict[species] ** -1
+    return K_dict

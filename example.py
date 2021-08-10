@@ -1,5 +1,9 @@
+import re
+import pandas as pd
+
 from src.main import Condensation
 from analyze import plot
+
 
 protosolar_disk = {'Ni': 1.66e+16, 'C': 2.692e+18, 'F': 363100000000000.0, 'H': 1e+22, 'K': 1072000000000000.0,
                    'Mn': 2692000000000000.0, 'Mg': 3.981e+17, 'O': 4.898e+18, 'Ne': 8.511e+17, 'P': 2570000000000000.0,
@@ -18,27 +22,12 @@ bulk_moon = {
     "Na": 0.034834503,
     "K": 0.001833649,
     # "Zn": 5.30606E-05,
-    "O": 58.43994733
+    "O": 58.43994733,
 }  # atom%
 
-liquid_species = [
-    "SiO2", "MgO", "FeO", "Fe2O3", "Fe3O4", "CaO",
-    "Al2O3", "TiO2", "Na2O", "K2O", "ZnO", "MgSiO3", "Mg2SiO4",
-    "MgAl2O4", "MgTiO3", "MgTi2O5", "Mg2TiO4", "Al6Si2O13", "CaAl2O4",
-    "CaAl4O7", "Ca12Al14O33", "CaSiO3", "CaAl2Si2O8", "CaMgSi2O6",
-    "Ca2MgSi2O7", "Ca2Al2SiO7", "CaTiO3", "Ca2SiO4", "CaTiSiO5",
-    "FeTiO3", "Fe2SiO4", "FeAl2O4", "CaAl12O19", "Mg2Al4Si5O18",
-    "Na2SiO3", "Na2Si2O5", "NaAlSiO4", "NaAlSi3O8", "NaAlO2", "Na2TiO3",
-    "NaAlSi2O6", "K2SiO3", "K2Si2O5", "KAlSiO4", "KAlSi3O8", "KAlO2",
-    "KAlSi2O6", "K2Si4O9", "KCaAlSi2O7", "Zn2SiO4", "ZnTiO3", "Zn2TiO4",
-    "ZnAl2O4"
-]
-
-gas_species = [
-    "O", "O2", "Mg", "MgO", "Si", "SiO", "SiO2", "Fe", "FeO", "Al",
-    "AlO", "AlO2", "Al2O", "Al2O2", "Ca", "CaO", "Na", "Na2", "NaO", "Na2O", "Na+",
-    "K", "K2", "KO", "K2O", "K+", "Ti", "TiO", "TiO2", "Zn", "ZnO", "e−"
-]
+liquid_species = pd.read_excel("data/MAGMA_Thermodynamic_Data.xlsx", sheet_name="Table 1")['Reactant'].tolist()
+liquid_species = liquid_species + pd.read_excel("data/MAGMA_Thermodynamic_Data.xlsx", sheet_name="Table 3")['Product'].tolist()
+gas_species = pd.read_excel("data/MAGMA_Thermodynamic_Data.xlsx", sheet_name="Table 2")['Product'].tolist()
 
 c = Condensation(
     start_temperature=4000,
@@ -47,7 +36,10 @@ c = Condensation(
     total_pressure=1 * 10 ** -3,
     solid=False,
     liquid=True,
-    gas=True
+    gas=True,
+    solids=[],
+    liquids=liquid_species,
+    gasses=gas_species
 )
 
 c.sequence()

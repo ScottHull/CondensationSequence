@@ -4,6 +4,17 @@ import bisect
 import sys
 
 
+def reformat_species_name(name):
+    d = re.findall(r'([A-Z][a-z]*)(\d*)', name)
+    new_name = ""
+    for i in d:
+        i = list(i)
+        element, stoich = i[0], i[1]
+        if i[1] == '':
+            i[1] = '1'
+        new_name += i[0] + i[1]
+    return new_name
+
 def get_methods(path):
     """
     Returns a dictionary of the method for calculating K for each molecule.
@@ -62,7 +73,8 @@ def lookup_and_interpolate(table_x, table_y, x_value):
         return table_y[idx]
 
 
-def get_atoms_from_molecule(path, skiprows=0, solid=False, liquid=False):
+
+def get_atoms_from_molecule(molecules, solid=False, liquid=False):
     """
     Returns the stoichiometry of molecules as a dictionary.
     :param path:
@@ -70,9 +82,8 @@ def get_atoms_from_molecule(path, skiprows=0, solid=False, liquid=False):
     :return:
     """
     molecules_dict = {}
-    df = pd.read_csv(path, delimiter="\t", header=None, skiprows=skiprows)
-    molecules = df[0]
     for m in molecules:
+        m = reformat_species_name(name=m)
         molecule_name = m
         if solid:
             molecule_name = m + "_s"
@@ -81,7 +92,10 @@ def get_atoms_from_molecule(path, skiprows=0, solid=False, liquid=False):
         molecules_dict.update({molecule_name: {}})
         atom_nums = re.findall(r'([A-Z][a-z]*)(\d*)', m)
         for i in atom_nums:
+            i = list(i)
             name = i[0]
+            if i[1] == "":
+                i[1] = 1
             molecules_dict[molecule_name].update({name: int(i[1])})
     return molecules_dict
 
