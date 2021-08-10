@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from math import log10
 import matplotlib.pyplot as plt
 
 test_temperature_range = np.arange(100, 4000, 10)
@@ -13,7 +14,7 @@ for species in base_liq_df.index:
     A, B = base_liq_df["A"][species], base_liq_df["B"][species]
     vals = []
     for T in test_temperature_range:
-        vals.append(A + (B / T))  # log10(K) = A + B/T
+        vals.append(log10((10 ** (A + (B / T))) ** -1))  # log10(K) = A + B/T
     base_liq_K.update({species: vals})
 
 fig = plt.figure(figsize=(16, 9))
