@@ -2,8 +2,9 @@ from math import exp, log, log10
 import re
 import numpy as np
 import pandas as pd
-from src import collect_data
 import sys
+
+from src import collect_data
 
 
 def read_janaf_file(path):
@@ -166,9 +167,11 @@ def get_K_solids(temperature):
 
     return K_dict
 
+
 def gas_F(temperature, A, B):
     log10K = A + (B / temperature)
     return 10 ** log10K
+
 
 def gas_J(temperature, molecule, R=8.3144621):
     """
@@ -302,15 +305,15 @@ def get_K_gas(temperature):
             if method == "J":  # JANAF
                 K = gas_J(temperature=temperature, molecule=molecule)
                 K_gas.update({molecule: K})
-    
+
             elif method == "K":
                 K = gas_K(temperature=temperature, molecule=molecule)
                 K_gas.update({molecule: K})
-    
+
             elif method == "P":
                 K = gas_P(temperature=temperature, molecule=molecule)
                 K_gas.update({molecule: K})
-    
+
             elif method == "F":
                 A = float(values[2])
                 B = float(values[3])
@@ -347,7 +350,8 @@ def liquid_J(temperature, molecule, R=8.3144621):
 
 
 def liquid_F(temperature, A, B):
-    return 10**(A + (B / temperature))
+    return 10 ** (A + (B / temperature))
+
 
 def get_K_liquid(temperature):
     """
@@ -355,7 +359,8 @@ def get_K_liquid(temperature):
     """
     K_dict = {}
     # molecules = pd.read_csv("data/Liquids.dat", delimiter="\t", header=None, skiprows=0, index_col=False)
-    molecules = pd.read_csv("data/liquid_pseudospecies_fegley_1986.dat", delimiter="\t", header=None, skiprows=1, index_col=False)
+    molecules = pd.read_csv("data/liquid_pseudospecies_fegley_1986.dat", delimiter="\t", header=None, skiprows=1,
+                            index_col=False)
 
     for row in molecules.itertuples(index=False):
         molecule = row[0]
@@ -388,3 +393,41 @@ def get_K(gas_molecules, gas_methods, solid_molecules, liquid_molecules, tempera
         K_solids = get_K_solids(temperature=temperature)
         K_dict.update(K_solids)
     return K_dict
+
+
+def __vf_K(A, B, T):
+    return 10 ** (A + (B / T))
+
+
+def __get_constants_vf():
+    base_liq_df = pd.read_excel("data/MAGMA_Thermodynamic_Data.xlsx", sheet_name="Table 1", index_col="Reactant")
+    gas_df = pd.read_excel("data/MAGMA_Thermodynamic_Data.xlsx", sheet_name="Table 2", index_col="Product")
+    liq_df = pd.read_excel("data/MAGMA_Thermodynamic_Data.xlsx", sheet_name="Table 3", index_col="Product")
+    constants = {}  # A, B in log10(K) = A + B/T
+    for species in base_liq_df.index:
+        A, B = base_liq_df["A"][species], base_liq_df["B"][species]
+        constants.update({species + "_l": {"A": A, "B": B}})
+    for species in gas_df.index:
+        A, B = gas_df["A"][species], gas_df["B"][species]
+        constants.update({species: {"A": A, "B": B}})
+    for species in liq_df.index:
+        A, B = liq_df["A"][species], liq_df["B"][species]
+        constants.update({species + "_l": {"A": A, "B": B}})
+
+    return constants
+
+
+def get_K_vf(self, temperature):
+    """
+    K constants provided by methods of Vischer & Fegley 1987.
+    :return:
+    """
+    base_oxides = ["SiO2_l", 'MgO', "FeO_l", "CaO_l", "Al2O3_l", "TIO2_l", "Na2O_l", "K2O_l", "ThO2_l", "UO2_l",
+                   "PuO2_l"]
+    self.constants = __get_constants_vf()
+    K_dict = {}
+    for species in self.constants.keys():
+        K_dict.update(({
+            species: __vf_K(A=self.constants[species]["A"], B=self.constants[species]["B"], T=temperature)
+        }))
+    print(K_dict)

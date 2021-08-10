@@ -374,10 +374,11 @@ class Condensation:
         """
         print("Initial setup...")
         self.normalized_abundances = self.normalize_abundances(abundances=self.abundances)
-        self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
-                         temperature=self.temperature, gas_methods=self.gas_methods,
-                         liquid_molecules=self.liquid_molecules_library, gas=self.IS_GAS, liquid=self.IS_LIQUID,
-                         solid=self.IS_SOLID)
+        # self.K = k.get_K(gas_molecules=self.gas_molecules_library, solid_molecules=self.solid_molecules_library,
+        #                  temperature=self.temperature, gas_methods=self.gas_methods,
+        #                  liquid_molecules=self.liquid_molecules_library, gas=self.IS_GAS, liquid=self.IS_LIQUID,
+        #                  solid=self.IS_SOLID)
+        self.K = k.get_K_vf(self=self, temperature=self.temperature)
         self.mass_balance = self.calculate_mass_balance()
 
         # a list of abundances corresponding to the elements list
