@@ -120,15 +120,7 @@ class Condensation:
             if s not in names:
                 names.append(s)
                 guess_number_density = np.append(guess_number_density,
-                                                 force_guess.get_guess(
-                                                     molecule=s,
-                                                     mass_balance=self.mass_balance,
-                                                     total_n=self.total_number,
-                                                     elements_in_solid=self.elements_in_solid,
-                                                     temperature=self.temperature,
-                                                     number_densities=self.number_densities,
-                                                     percent_condensed=self.percent_element_condensed
-                                                 ))  # append a guess for all existing solids
+                                                 1e-13)  # append a guess for all existing solids
         if len(self.condensing_solids) > 0 or len(self.condensing_liquids) > 0:
             guess_number_density = force_guess.kick_old_guesses(names=names, condensing_solids=self.condensing_solids,
                                                                 condensing_liquids=self.condensing_liquids,
